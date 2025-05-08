@@ -38,15 +38,14 @@ namespace MTM101BaldAPI.Registers
     {
         public RandomEventFlags flags { private set; get; }
 
-        private static FieldInfo foKey = AccessTools.Field(typeof(RandomEvent), "eventIntro");
         private RandomEvent rEvent;
         public RandomEvent value => rEvent;
 
         public RandomEventType type => rEvent.Type;
 
-        public SoundObject introSound => ((SoundObject)foKey.GetValue(value));
+        public SoundObject introSound => rEvent.eventIntro;
 
-        public string descKey => introSound.soundKey;
+        public string descKey => rEvent.eventDescKey;
 
         public List<string> tags => _tags;
         private List<string> _tags = new List<string>();

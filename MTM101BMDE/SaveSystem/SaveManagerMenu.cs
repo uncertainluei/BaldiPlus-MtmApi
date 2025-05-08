@@ -150,7 +150,6 @@ namespace MTM101BaldAPI
                 menButton.underlineOnHigh = true;
                 modList[i].raycastTarget = true;
                 modList[i].overflowMode = TextOverflowModes.Ellipsis;
-                menButton.audConfirmOverride = silence;
                 menButton.eventOnHigh = true;
                 int currentIndex = i; //if i dont do this then i will always be modList.Length
                 menButton.OnHighlight.AddListener(() => { ShowTooltipForModListElement(currentIndex); });

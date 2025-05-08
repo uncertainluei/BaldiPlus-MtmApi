@@ -85,22 +85,6 @@ namespace MTM101BaldAPI
             return obj;
         }
 
-		/// <summary>
-		/// Creates a material with the appropiate shader and texture for use on the minimap.
-		/// </summary>
-		/// <param name="tex"></param>
-		/// <returns></returns>
-		public static Material CreateMapTileShader(Texture2D tex)
-		{
-			Material mat = new Material(MTM101BaldiDevAPI.AssetMan.Get<Shader>("Shader Graphs/MapTile"));
-			mat.SetTexture("_MapBackground", tex);
-			mat.name = "MapTileMat_" + tex.name;
-			mat.renderQueue = 2000;
-			mat.color = Color.white;
-
-            return mat;
-		}
-
 		public static Material SpriteMaterial => MTM101BaldiDevAPI.AssetMan.Get<Material>("SpriteStandard_Billboard");
 
 		/// <summary>

@@ -217,7 +217,6 @@ namespace MTM101BaldAPI.OptionsAPI
             obj.transform.localPosition = position;
             image.rectTransform.sizeDelta = size;
             StandardMenuButton menButton = obj.ConvertToButton<StandardMenuButton>();
-            menButton.audConfirmOverride = silence;
             AddTooltip(menButton, tooltip);
             return menButton;
         }

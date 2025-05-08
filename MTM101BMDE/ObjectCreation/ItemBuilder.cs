@@ -52,8 +52,7 @@ namespace MTM101BaldAPI.ObjectCreation
             item.itemSpriteSmall = smallSprite;
             item.itemSpriteLarge = largeSprite;
             item.price = price;
-            item.value = generatorCost;
-            item.overrideDisabled = overrideDisabled;
+            item.cost = generatorCost;
             if (itemObjectType != null)
             {
                 GameObject obj = new GameObject();
@@ -67,12 +66,12 @@ namespace MTM101BaldAPI.ObjectCreation
             {
                 item.item = objectReference;
             }
-            if (instantUse)
-            {
-                flags |= ItemFlags.InstantUse;
-                item.addToInventory = false;
-            }
-            item.audPickupOverride = pickupSoundOverride;
+            //if (instantUse)
+            //{
+            //    flags |= ItemFlags.InstantUse;
+            //    item.addToInventory = false;
+            //}
+            //item.audPickupOverride = pickupSoundOverride;
             if (metaDataToAddTo != null)
             {
                 metaDataToAddTo.itemObjects = metaDataToAddTo.itemObjects.AddToArray(item);

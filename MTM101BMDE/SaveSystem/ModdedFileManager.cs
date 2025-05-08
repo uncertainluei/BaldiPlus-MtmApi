@@ -18,44 +18,11 @@ namespace MTM101BaldAPI.SaveSystem
         public int saveIndex { get; internal set; }
         public string savePath { get; internal set; }
         public List<int> saveIndexes = new List<int>();
-        static FieldInfo _cgmbackupItems = AccessTools.Field(typeof(CoreGameManager), "backupItems");
-        static FieldInfo _cgmbackupLockerItems = AccessTools.Field(typeof(CoreGameManager), "backupLockerItems");
-        static FieldInfo _cgmrestoreItemsOnSpawn = AccessTools.Field(typeof(CoreGameManager), "restoreItemsOnSpawn");
 
         public void CreateSavedGameCoreManager(GameLoader loader)
         {
             UnityEngine.Object.Instantiate<CoreGameManager>(loader.cgmPre);
             ModdedSaveGame savedGameData = saveData;
-            Singleton<CoreGameManager>.Instance.SetSeed(savedGameData.seed);
-            Singleton<CoreGameManager>.Instance.SetLives(savedGameData.lives, true);
-            Singleton<CoreGameManager>.Instance.AddPoints(savedGameData.ytps, 0, false, false);
-            Singleton<CoreGameManager>.Instance.tripPlayed = savedGameData.fieldTripPlayed;
-            Singleton<CoreGameManager>.Instance.johnnyHelped = savedGameData.johnnyHelped;
-            if (savedGameData.mapAvailable)
-            {
-                Singleton<CoreGameManager>.Instance.LoadSavedMap(savedGameData.foundMapTiles.ConvertTo2d(savedGameData.mapSizeX, savedGameData.mapSizeZ), savedGameData.markerPositions, savedGameData.markerIds);
-            }
-            if (savedGameData.mapPurchased)
-            {
-                Singleton<CoreGameManager>.Instance.levelMapHasBeenPurchasedFor = savedGameData.level;
-            }
-            //Equivalent to Singleton<CoreGameManager>.Instance.RestoreSavedItems(savedGameData.items);
-            List<ItemObject[]> backupItems = (List<ItemObject[]>)_cgmbackupItems.GetValue(Singleton<CoreGameManager>.Instance);
-            backupItems.Add(new ItemObject[savedGameData.items.Count]);
-            for (int i = 0; i < savedGameData.items.Count; i++)
-            {
-                backupItems[0][i] = savedGameData.items[i].LocateObject();
-            }
-            //Equivalent to Singleton<CoreGameManager>.Instance.RestoreSavedLockerItems(savedGameData.lockerItems)
-            ItemObject[] backupLockerItems = (ItemObject[])_cgmbackupLockerItems.GetValue(Singleton<CoreGameManager>.Instance);
-            for (int i = 0; i < savedGameData.lockerItems.Count; i++)
-            {
-                backupLockerItems[i] = savedGameData.lockerItems[i].LocateObject();
-                Singleton<CoreGameManager>.Instance.currentLockerItems[i] = backupLockerItems[i];
-            }
-            _cgmbackupItems.SetValue(Singleton<CoreGameManager>.Instance,backupItems); //not sure if necessary.
-            _cgmbackupLockerItems.SetValue(Singleton<CoreGameManager>.Instance, backupLockerItems);
-            _cgmrestoreItemsOnSpawn.SetValue(Singleton<CoreGameManager>.Instance, true);
         }
 
         public void RegenerateTags()
@@ -265,33 +232,6 @@ namespace MTM101BaldAPI.SaveSystem
 
 
     // ******* Patches ******* //
-    
-    [HarmonyPatch(typeof(HideSeekMenu))]
-    [HarmonyPatch("OnEnable")]
-    class DisableSaveButton
-    {
-        static bool Prefix(HideSeekMenu __instance, GameObject ___mainNew, GameObject ___mainNewWarning, GameObject ___mainContinue)
-        {
-            if (MTM101BaldiDevAPI.SaveGamesHandler == SavedGameDataHandler.Modded)
-            {
-                if (Singleton<ModdedFileManager>.Instance.saveData.saveAvailable)
-                {
-                    ___mainNew.SetActive(false);
-                    ___mainNewWarning.SetActive(true);
-                    ___mainContinue.SetActive(true);
-                }
-                return false;
-            }
-            if (!MTM101BaldiDevAPI.SaveGamesEnabled)
-            {
-                ___mainNew.SetActive(true);
-                ___mainNewWarning.SetActive(false);
-                ___mainContinue.SetActive(false);
-                return false;
-            }
-            return true;
-        }
-    }
 
     [HarmonyPatch(typeof(GameLoader))]
     [HarmonyPatch("SetSave")]
@@ -303,25 +243,24 @@ namespace MTM101BaldAPI.SaveSystem
         }
     }
 
-    [HarmonyPatch(typeof(GameLoader))]
-    [HarmonyPatch("LoadSavedGame")]
-    class LoadModdedSavedGame
-    {
-        static bool Prefix(GameLoader __instance)
-        {
-            if (MTM101BaldiDevAPI.SaveGamesHandler != SavedGameDataHandler.Modded) return true;
-            Singleton<ModdedFileManager>.Instance.CreateSavedGameCoreManager(__instance);
-            Singleton<CursorManager>.Instance.LockCursor();
-            __instance.SetMode(0);
-            __instance.LoadLevel(Singleton<ModdedFileManager>.Instance.saveData.level);
-            Singleton<ModdedFileManager>.Instance.DeleteSavedGame();
-            ModdedSaveGame.ModdedSaveGameHandlers.Do(x =>
-            {
-                x.Value.OnCGMCreated(Singleton<CoreGameManager>.Instance, true);
-            });
-            return false;
-        }
-    }
+    //[HarmonyPatch(typeof(GameLoader))]
+    //[HarmonyPatch("LoadSavedGame")]
+    //class LoadModdedSavedGame
+    //{
+    //    static bool Prefix(GameLoader __instance)
+    //    {
+    //        if (MTM101BaldiDevAPI.SaveGamesHandler != SavedGameDataHandler.Modded) return true;
+    //        Singleton<ModdedFileManager>.Instance.CreateSavedGameCoreManager(__instance);
+    //        Singleton<CursorManager>.Instance.LockCursor();
+    //        __instance.SetMode(0);
+    //        Singleton<ModdedFileManager>.Instance.DeleteSavedGame();
+    //        ModdedSaveGame.ModdedSaveGameHandlers.Do(x =>
+    //        {
+    //            x.Value.OnCGMCreated(Singleton<CoreGameManager>.Instance, true);
+    //        });
+    //        return false;
+    //    }
+    //}
 
     [HarmonyPatch(typeof(GameLoader))]
     [HarmonyPatch("Initialize")]
@@ -365,56 +304,21 @@ namespace MTM101BaldAPI.SaveSystem
         }
     }
 
-    [HarmonyPatch(typeof(CoreGameManager))]
-    [HarmonyPatch("SaveAndQuit")]
-    class SaveAndQuitModdedData
-    {
-        // override the function completely, if we make sure every reference is referring to ModdedSaveGame, this should leave vanilla games intact.
-        static bool Prefix(CoreGameManager __instance, ref int ___lives, ref int ___seed, ref bool[,] ___foundTilesToRestore, ref IntVector2 ___savedMapSize, ref List<Vector2> ___markerPositions, ref List<int> ___markerIds, ref int ___attempts)
-        {
-            if (MTM101BaldiDevAPI.SaveGamesHandler != SavedGameDataHandler.Modded) return true;
-            ModdedSaveGame newSave = new ModdedSaveGame();
-            newSave.saveAvailable = true;
-            if (__instance.GetPlayer(0) != null)
-            {
-                ItemObject[] itms = __instance.GetPlayer(0).itm.items;
-                for (int i = 0; i < itms.Length; i++)
-                {
-                    newSave.items.Add(new ModdedItemIdentifier(itms[i]));
-                }
-            }
-            if (__instance.GetPlayer(0) != null)
-            {
-                ItemObject[] lockerItems = Singleton<CoreGameManager>.Instance.currentLockerItems;
-                for (int i = 0; i < lockerItems.Length; i++)
-                {
-                    newSave.lockerItems.Add(new ModdedItemIdentifier(lockerItems[i]));
-                }
-            }
-            newSave.level = __instance.nextLevel;
-            newSave.ytps = __instance.GetPoints(0);
-            newSave.lives = ___lives;
-            newSave.attempts = ___attempts;
-            newSave.seed = ___seed;
-            newSave.saveAvailable = true;
-            newSave.fieldTripPlayed = __instance.tripPlayed;
-            newSave.johnnyHelped = __instance.johnnyHelped;
-            __instance.BackupMap(Singleton<BaseGameManager>.Instance.Ec.map);
-            newSave.markerPositions = ___markerPositions;
-            newSave.markerIds = ___markerIds;
-            newSave.mapPurchased = __instance.saveMapPurchased;
-            newSave.mapAvailable = __instance.saveMapAvailable;
-            newSave.timeLimitChallenge = __instance.timeLimitChallenge;
-            newSave.mapChallenge = __instance.mapChallenge;
-            newSave.inventoryChallenge = __instance.inventoryChallenge;
-            newSave.foundMapTiles = ___foundTilesToRestore.ConvertTo1d(___savedMapSize.x, ___savedMapSize.z);
-            newSave.mapSizeX = ___savedMapSize.x;
-            newSave.mapSizeZ = ___savedMapSize.z;
-            newSave.FillBlankModTags();
-            Singleton<ModdedFileManager>.Instance.saveData = newSave;
-            Singleton<PlayerFileManager>.Instance.Save();
-            __instance.Quit();
-            return false;
-        }
-    }
+    //[HarmonyPatch(typeof(CoreGameManager))]
+    //[HarmonyPatch("SaveAndQuit")]
+    //class SaveAndQuitModdedData
+    //{
+    //    // override the function completely, if we make sure every reference is referring to ModdedSaveGame, this should leave vanilla games intact.
+    //    static bool Prefix(CoreGameManager __instance, ref int ___lives, ref int ___seed, ref bool[,] ___foundTilesToRestore, ref IntVector2 ___savedMapSize, ref List<Vector2> ___markerPositions, ref List<int> ___markerIds, ref int ___attempts)
+    //    {
+    //        if (MTM101BaldiDevAPI.SaveGamesHandler != SavedGameDataHandler.Modded) return true;
+    //        ModdedSaveGame newSave = new ModdedSaveGame();
+    //        newSave.saveAvailable = true;
+    //        newSave.FillBlankModTags();
+    //        Singleton<ModdedFileManager>.Instance.saveData = newSave;
+    //        Singleton<PlayerFileManager>.Instance.Save();
+    //        __instance.Quit();
+    //        return false;
+    //    }
+    //}
 }

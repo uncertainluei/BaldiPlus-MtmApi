@@ -71,7 +71,7 @@ namespace MTM101BaldAPI
             get
             {
                 if (!npc) return false; // NPC GONE! Establish CHAOS!
-                timeRemaining -= Time.deltaTime * npc.TimeScale;
+                timeRemaining -= Time.deltaTime * npc.ec.NpcTimeScale;
                 return (timeRemaining >= 0);
             }
         }

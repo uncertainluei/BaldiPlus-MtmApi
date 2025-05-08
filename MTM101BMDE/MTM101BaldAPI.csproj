@@ -1,19 +1,32 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
-  <PropertyGroup>
-    <TargetFramework>netstandard2.0</TargetFramework>
-    <Configurations>Debug;Release;</Configurations>
-	<GenerateDocumentationFile>True</GenerateDocumentationFile>
-  </PropertyGroup>
+	<PropertyGroup>
+		<TargetFramework>netstandard2.0</TargetFramework>
+		<Configurations>Debug;Release;</Configurations>
+		<GenerateDocumentationFile>True</GenerateDocumentationFile>
 
-  <ItemGroup>
+		<AssemblyName>UncertainLuei.MTM101BaldApi-BBCR</AssemblyName>
+		<RootNamespace>MTM101BaldAPI</RootNamespace>
+		<NoWarn>1701;1702;IDE0051</NoWarn>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<PackageReference Include="BepInEx.AssemblyPublicizer" Version="0.4.2" />
+		<PackageReference Include="BepInEx.AssemblyPublicizer.MSBuild" Version="0.4.2">
+			<PrivateAssets>all</PrivateAssets>
+			<IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+		</PackageReference>
+		<PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
+	</ItemGroup>
+
+	<ItemGroup>
 	<EmbeddedResource Include="..\Embedded\GMGSx_Unmodified.sf2">
 	</EmbeddedResource>
 	<None Include="..\.editorconfig" Link=".editorconfig" />
     <Reference Include="0Harmony">
       <HintPath>..\Dependencies\0Harmony.dll</HintPath>
     </Reference>
-    <Reference Include="Assembly-CSharp">
+    <Reference Include="Assembly-CSharp" Publicize="true">
       <HintPath>..\Dependencies\Assembly-CSharp.dll</HintPath>
     </Reference>
     <Reference Include="BepInEx">

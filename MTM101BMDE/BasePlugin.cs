@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Diagnostics;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Net;
@@ -73,8 +72,6 @@ namespace MTM101BaldAPI
         internal ConfigEntry<bool> attemptOnline;
         internal ConfigEntry<bool> alwaysModdedSave;
 
-        internal Sprite[] questionMarkSprites;
-
         public static ItemMetaStorage itemMetadata = new ItemMetaStorage();
         public static NPCMetaStorage npcMetadata = new NPCMetaStorage();
         public static RandomEventMetaStorage randomEventStorage = new RandomEventMetaStorage();
@@ -96,75 +93,6 @@ namespace MTM101BaldAPI
                 saveHandler = value ? (MTM101BaldiDevAPI.Instance.alwaysModdedSave.Value ? SavedGameDataHandler.Modded : (ModdedSaveGame.ModdedSaveGameHandlers.Count > 0 ? SavedGameDataHandler.Modded : SavedGameDataHandler.Vanilla)) : SavedGameDataHandler.None;
             }
         }
-
-        /*
-        internal static Dictionary<LevelType, Type[]> removeFromForced = new Dictionary<LevelType, Type[]>()
-        {
-            { LevelType.Schoolhouse, new Type[0] },
-            { LevelType.Maintenance, new Type[2] { typeof(Structure_PowerLever), typeof(Structure_SteamValves) } },
-            { LevelType.Laboratory, new Type[1] { typeof(Structure_TeleporterRoom) } },
-            { LevelType.Factory, new Type[2] { typeof(Structure_ConveyorBelt), typeof(Structure_Rotohalls) } },
-
-        };
-
-        
-        static void GeneratorChanges(string levelName, int levelNumber, SceneObject sceneObj)
-        {
-            SceneObjectMetadata meta = sceneObj.GetMeta();
-            // dont modify if no meta and dont modify if the scene wasn't added by the API.
-            if (meta == null) return;
-            if (meta.info != MTM101BaldiDevAPI.Instance.Info) return;
-            LevelObject[] allLevelObjects = sceneObj.GetCustomLevelObjects();
-
-            for (int i = 0; i < allLevelObjects.Length; i++)
-            {
-                LevelObject currentObject = allLevelObjects[i];
-                // a little slow but tbh i dont care
-                if (removeFromForced.ContainsKey(currentObject.type))
-                {
-                    Type[] removeFromThisObject = removeFromForced[currentObject.type];
-                    List<StructureWithParameters> removedDatas = new List<StructureWithParameters>();
-                    List<StructureWithParameters> forcedStructures = currentObject.forcedStructures.ToList();
-                    for (int j = forcedStructures.Count; j >= 0; j--)
-                    {
-                        if (removeFromThisObject.Contains(forcedStructures[i].prefab.GetType()))
-                        {
-                            removedDatas.Add(forcedStructures[i]);
-                            removedDatas.RemoveAt(i);
-                            continue;
-                        }
-                        // annoying hack for the Factory
-                        if (currentObject.type == LevelType.Factory)
-                        {
-                            if (forcedStructures[i].prefab.name == "LockdownDoorConstructor")
-                            {
-                                removedDatas.Add(forcedStructures[i]);
-                                removedDatas.RemoveAt(i);
-                            }
-                        }
-                    }
-
-                    currentObject.forcedStructures = forcedStructures.ToArray();
-
-                    if (currentObject.potentialStructures == null)
-                    {
-                        currentObject.potentialStructures = new WeightedStructureWithParameters[0];
-                    }
-
-                    for (int j = 0; j < removedDatas.Count; j++)
-                    {
-                        currentObject.potentialStructures = currentObject.potentialStructures.AddToArray(new WeightedStructureWithParameters()
-                        {
-                            selection = removedDatas[i],
-                            weight = 100
-                        });
-                    }
-                    currentObject.minSpecialBuilders += removedDatas.Count;
-                    currentObject.maxSpecialBuilders += removedDatas.Count;
-                }
-            }
-        }
-        */
 
         internal static IntrusiveAPIFeatures intrusiveFeatures = IntrusiveAPIFeatures.None;
         internal static bool tooLateForGeneratorBasedFeatures = false;
@@ -279,6 +207,10 @@ namespace MTM101BaldAPI
         internal void OnSceneUnload()
         {
             AssetMan.Add<CursorController>("cursorController", Resources.FindObjectsOfTypeAll<CursorController>().First(x => x.name == "CursorOrigin"));
+            // Loading screen
+            Canvas loaderScreen = UIHelpers.CreateBlankUIScreen("Loader", false, true);
+            UIHelpers.AddBordersToCanvas(loaderScreen);
+
             gameLoader = Resources.FindObjectsOfTypeAll<GameLoader>().First(x => x.GetInstanceID() >= 0);
             Singleton<GlobalCam>.Instance.StopCurrentTransition();
             // INITIALIZE ITEM METADATA
@@ -298,7 +230,6 @@ namespace MTM101BaldAPI
                             grapplingHook = x;
                         }
                         break;
-                    case Items.DietBsoda:
                     case Items.Bsoda:
                         ItemMetaData bm = x.AddMeta(MTM101BaldiDevAPI.Instance, ItemFlags.Persists | ItemFlags.CreatesEntity);
                         bm.tags.Add("food");
@@ -341,40 +272,6 @@ namespace MTM101BaldAPI
                     case Items.DoorLock:
                         x.AddMeta(MTM101BaldiDevAPI.Instance, ItemFlags.None);
                         break;
-                    case Items.NanaPeel:
-                        ItemMetaData bana = x.AddMeta(MTM101BaldiDevAPI.Instance, ItemFlags.Persists | ItemFlags.CreatesEntity);
-                        bana.tags.Add("food");
-                        break;
-                    case Items.Points:
-                        pointObjects.Add(x);
-                        break;
-                    case Items.Map:
-                        x.AddMeta(MTM101BaldiDevAPI.Instance, ItemFlags.InstantUse).tags.Add("shop_dummy");
-                        break;
-                    case Items.BusPass:
-                        x.AddMeta(MTM101BaldiDevAPI.Instance, ItemFlags.NoUses);
-                        break;
-                    // MYSTMAN12 WHY
-                    case Items.lostItem0:
-                    case Items.lostItem1:
-                    case Items.lostItem2:
-                    case Items.lostItem3:
-                    case Items.lostItem4:
-                    case Items.lostItem5:
-                    case Items.lostItem6:
-                    case Items.lostItem7:
-                    case Items.lostItem8:
-                    case Items.lostItem9:
-                        x.AddMeta(MTM101BaldiDevAPI.Instance, ItemFlags.NoUses).tags.Add("lost_item");
-                        break;
-                    case Items.CircleKey:
-                    case Items.TriangleKey:
-                    case Items.SquareKey:
-                    case Items.PentagonKey:
-                    case Items.HexagonKey:
-                    case Items.WeirdKey:
-                        x.AddMeta(MTM101BaldiDevAPI.Instance, ItemFlags.None).tags.Add("shape_key");
-                        break;
                     default:
                         // modded items start at 256, so we somehow have initialized after the mod in question, ignore the data.
                         if ((int)x.itemType < 256)
@@ -404,22 +301,24 @@ namespace MTM101BaldAPI
             });
 
 
-            Resources.FindObjectsOfTypeAll<ItemObject>().Where(x => x.name.EndsWith("Tutorial")).Do(x =>
-            {
-                ItemMetaData meta = ItemMetaStorage.Instance.FindByEnum(x.itemType);
-                meta.flags |= ItemFlags.HasTutorialVariant;
-                if (x.itemType == Items.GrapplingHook)
-                {
-                    meta.itemObjects = meta.itemObjects.Reverse().AddItem(x).Reverse().ToArray();
-                }
-                else
-                {
-                    meta.itemObjects = meta.itemObjects.AddItem(x).Reverse().ToArray();
-                }
-                x.AddMeta(meta);
-            });
+            //Resources.FindObjectsOfTypeAll<ItemObject>().Where(x => x.name.EndsWith("Tutorial")).Do(x =>
+            //{
+            //    ItemMetaData meta = ItemMetaStorage.Instance.FindByEnum(x.itemType);
+            //    meta.flags |= ItemFlags.HasTutorialVariant;
+            //    if (x.itemType == Items.GrapplingHook)
+            //    {
+            //        meta.itemObjects = meta.itemObjects.Reverse().AddItem(x).Reverse().ToArray();
+            //    }
+            //    else
+            //    {
+            //        meta.itemObjects = meta.itemObjects.AddItem(x).Reverse().ToArray();
+            //    }
+            //    x.AddMeta(meta);
+            //});
+
             // INITIALIZE CHARACTER METADATA
             NPC[] NPCs = Resources.FindObjectsOfTypeAll<NPC>();
+
             NPCMetaStorage.Instance.Add(new NPCMetadata(MTM101BaldiDevAPI.Instance.Info, NPCs.Where(x => x.Character == Character.Baldi).ToArray(), "Baldi", NPCFlags.StandardAndHear, new string[] { "teacher", "faculty" }));
             NPCMetaStorage.Instance.Add(new NPCMetadata(MTM101BaldiDevAPI.Instance.Info, NPCs.Where(x => x.Character == Character.Principal).ToArray(), "Principal", NPCFlags.Standard, new string[] { "faculty" }));
             NPCMetaStorage.Instance.Add(new NPCMetadata(MTM101BaldiDevAPI.Instance.Info, NPCs.Where(x => x.Character == Character.Beans).ToArray(), "Beans", NPCFlags.Standard, new string[] { "student" }));
@@ -430,12 +329,7 @@ namespace MTM101BaldAPI
             NPCMetaStorage.Instance.Add(new NPCMetadata(MTM101BaldiDevAPI.Instance.Info, NPCs.Where(x => x.Character == Character.Playtime).ToArray(), "Playtime", NPCFlags.Standard, new string[] { "student" }));
             NPCMetaStorage.Instance.Add(new NPCMetadata(MTM101BaldiDevAPI.Instance.Info, NPCs.Where(x => x.Character == Character.Crafters).ToArray(), "Arts and Crafters", NPCFlags.Standard | NPCFlags.MakeNoise));
             NPCMetaStorage.Instance.Add(new NPCMetadata(MTM101BaldiDevAPI.Instance.Info, NPCs.Where(x => x.Character == Character.Sweep).ToArray(), "Gotta Sweep", NPCFlags.Standard, new string[] { "faculty" }));
-            NPCMetaStorage.Instance.Add(new NPCMetadata(MTM101BaldiDevAPI.Instance.Info, NPCs.Where(x => x.Character == Character.LookAt).ToArray(), "LookAt", NPCFlags.Standard));
             NPCMetaStorage.Instance.Add(new NPCMetadata(MTM101BaldiDevAPI.Instance.Info, NPCs.Where(x => x.Character == Character.Prize).ToArray(), "FirstPrize", NPCFlags.Standard | NPCFlags.MakeNoise));
-            NPCMetaStorage.Instance.Add(new NPCMetadata(MTM101BaldiDevAPI.Instance.Info, NPCs.Where(x => x.Character == Character.DrReflex).ToArray(), "DrReflex", NPCFlags.StandardAndHear, new string[] { "faculty" }));
-            NPCMetadata studentMeta = new NPCMetadata(MTM101BaldiDevAPI.Instance.Info, NPCs.Where(x => x.name.StartsWith("Student") && x.Character == Character.Null).ToArray(), "Student_0", NPCFlags.Standard | NPCFlags.NonStandardSpawn, new string[] { "student" });
-            studentMeta.nameLocalizationKey = "Student"; // technically not true as these guys have no localization key but. just incase.
-            NPCMetaStorage.Instance.Add(studentMeta);
 
             Resources.FindObjectsOfTypeAll<RandomEvent>().Do(x =>
             {
@@ -464,9 +358,6 @@ namespace MTM101BaldAPI
                         break;
                     case RandomEventType.Lockdown:
                         RandomEventMetaStorage.Instance.Add(new RandomEventMetadata(MTM101BaldiDevAPI.Instance.Info, x, RandomEventFlags.Permanent));
-                        break;
-                    case RandomEventType.TimeOut:
-                        RandomEventMetaStorage.Instance.Add(new RandomEventMetadata(MTM101BaldiDevAPI.Instance.Info, x, RandomEventFlags.Special));
                         break;
                 }
             });
@@ -548,8 +439,7 @@ namespace MTM101BaldAPI
             }
             whiteTexture.SetPixels(pixels.ToArray());
             whiteTexture.Apply();
-            Transform transformToTry = null;
-            transformToTry = GameObject.Find(GameObject.Find("NameEntry") ? "NameEntry" : "Menu").transform;
+            Transform transformToTry = loaderScreen.transform;
             Image whiteBG = UIHelpers.CreateImage(AssetLoader.SpriteFromTexture2D(whiteTexture, 1f), transformToTry, Vector3.zero, false);
             whiteBG.gameObject.AddComponent<ModLoadingScreenManager>();
         }
@@ -607,19 +497,16 @@ namespace MTM101BaldAPI
             subChild.AddComponent<DestroyOnAwakeInstantWithWarning>();
             PrefabSubObject = subChild;
 
-
-            AssetMan.Add<ElevatorScreen>("ElevatorScreen", Resources.FindObjectsOfTypeAll<ElevatorScreen>().First(x => x.transform.parent == null));
-            AssetMan.Add<HappyBaldi>("HappyBaldi3", Resources.FindObjectsOfTypeAll<HappyBaldi>().First(x => x.name == "HappyBaldi3"));
-            AssetMan.Add<SceneObject>("Pitstop", Resources.FindObjectsOfTypeAll<SceneObject>().First(x => x.name == "Pitstop"));
-            Ambience ambienceClone = GameObject.Instantiate<Ambience>(Resources.FindObjectsOfTypeAll<Ambience>().First(x => x.transform.parent.name == "Lvl1_MainGameManager"), prefabTransform);
+            AssetMan.Add<HappyBaldi>("HappyBaldi3", Resources.FindObjectsOfTypeAll<HappyBaldi>().First(x => x.name == "ClassicHappyBaldi"));
+            Ambience ambienceClone = GameObject.Instantiate<Ambience>(Resources.FindObjectsOfTypeAll<Ambience>().First(x => x.transform.parent.name == "ClassicGameManager"), prefabTransform);
             ambienceClone.name = "Ambience";
             AssetMan.Add<Ambience>("AmbienceTemplate", ambienceClone);
 
-            Canvas endlessScoreCanvasClone = GameObject.Instantiate<Canvas>(Resources.FindObjectsOfTypeAll<Canvas>().First(x => x.GetInstanceID() >= 0 && x.name == "Score" && (x.transform.parent.GetComponent<EndlessGameManager>() != null)), prefabTransform);
+            Canvas endlessScoreCanvasClone = GameObject.Instantiate<Canvas>(Resources.FindObjectsOfTypeAll<ClassicEndlessResults>().First(x => x.GetInstanceID() >= 0).GetComponent<Canvas>(), prefabTransform);
             endlessScoreCanvasClone.name = "Score";
             AssetMan.Add("EndlessScoreTemplate", endlessScoreCanvasClone);
 
-            AssetMan.Add("ErrorTemplate", Resources.FindObjectsOfTypeAll<Canvas>().Where(x => x.name == "EndingError").First());
+            AssetMan.Add("ErrorTemplate", Resources.FindObjectsOfTypeAll<ClassicErrorScreen>().Where(x => x.name == "ErrorScreen").First().GetComponentInChildren<Canvas>());
             AssetMan.Add("WindowTemplate", Resources.FindObjectsOfTypeAll<WindowObject>().Where(x => x.name == "WoodWindow").First());
             AssetMan.Add("DoorTemplate", Resources.FindObjectsOfTypeAll<StandardDoorMats>().Where(x => x.name == "ClassDoorSet").First());
             PosterObject baldiposter = Resources.FindObjectsOfTypeAll<PosterObject>().Where(x => x.name == "BaldiPoster").First();
@@ -627,20 +514,9 @@ namespace MTM101BaldAPI
             posterTemplate.name = "CharacterPosterTemplate";
             posterTemplate.baseTexture = null;
             AssetMan.Add<PosterObject>("CharacterPosterTemplate", posterTemplate);
-            // TODO: create TemplateNPC from scratch and stop duplicating beans
-            Beans beansToCopy = Resources.FindObjectsOfTypeAll<Beans>().First();
-            beansToCopy.gameObject.SetActive(false);
-            NPC templateNpc = GameObject.Instantiate<NPC>(beansToCopy);
-            beansToCopy.gameObject.SetActive(true);
-            templateNpc.GetComponent<Entity>().SetActive(false); //disable the entity
-            templateNpc.name = "TemplateNPC";
-            GameObject templateObject = templateNpc.gameObject;
-            GameObject.DestroyImmediate(templateObject.GetComponent<Beans>());
-            GameObject.DestroyImmediate(templateObject.GetComponent<Animator>());
-            templateObject.layer = LayerMask.NameToLayer("NPCs");
-            templateObject.ConvertToPrefab(false);
-            AssetMan.Add<GameObject>("TemplateNPC", templateObject);
-            MTM101BaldAPI.Registers.Buttons.ButtonColorManager.InitializeButtonColors();
+
+            //MTM101BaldAPI.Registers.Buttons.ButtonColorManager.InitializeButtonColors();
+            
             Sprite[] allSprites = Resources.FindObjectsOfTypeAll<Sprite>();
             AssetMan.Add<Sprite>("MenuArrowLeft",allSprites.First(x => x.name == "MenuArrowSheet_2"));
             AssetMan.Add<Sprite>("MenuArrowLeftHighlight", allSprites.First(x => x.name == "MenuArrowSheet_0"));
@@ -652,14 +528,12 @@ namespace MTM101BaldAPI
             AssetMan.Add<Sprite>("Check", allSprites.First(x => x.name == "YCTP_IndicatorsSheet_0"));
             AssetMan.Add<Material>("tileStandard", Resources.FindObjectsOfTypeAll<Material>().First(x => x.name == "TileBase"));
             AssetMan.AddFromResources<Shader>();
-            questionMarkSprites = allSprites.Where(x => x.texture.name == "QMarkSheet").ToArray();
             SoundObject[] allSoundObjects = Resources.FindObjectsOfTypeAll<SoundObject>();
-            AssetMan.Add<SoundObject>("Xylophone", allSoundObjects.First(x => x.name == "NotebookCollect"));
+            AssetMan.Add<SoundObject>("Xylophone", allSoundObjects.First(x => x.name == "BellGeneric"));
             AssetMan.Add<SoundObject>("Explosion", allSoundObjects.First(x => x.name == "GlassBreak"));
             AssetMan.AddFromResources<TMPro.TMP_FontAsset>();
             AssetMan.AddFromResources<Material>();
-            AssetMan.Add<SoundObject>("Silence", allSoundObjects.First(x => x.name == "Silence"));
-            AssetMan.Add<AudioClip>("ErrorSound", Resources.FindObjectsOfTypeAll<AudioClip>().First(x => x.name == "Activity_Incorrect"));
+            AssetMan.Add<AudioClip>("ErrorSound", Resources.FindObjectsOfTypeAll<AudioClip>().First(x => x.name == "Elv_Buzz"));
 
             // nab and modify the TextTextureGenerator prefab
             TextTextureGenerator foundGen = Resources.FindObjectsOfTypeAll<TextTextureGenerator>().First(x => x.GetInstanceID() >= 0);
@@ -683,25 +557,8 @@ namespace MTM101BaldAPI
             Dictionary<LevelObject, CustomLevelObject> oldToNewMapping = new Dictionary<LevelObject, CustomLevelObject>();
             foreach (SceneObject objct in sceneObjects)
             {
-                if (objct.levelObject == null)
-                {
-                    if (objct.randomizedLevelObject.Length == 0) continue;
-                    for (int i = 0; i < objct.randomizedLevelObject.Length; i++)
-                    {
-                        WeightedLevelObject curWeighted = objct.randomizedLevelObject[i];
-                        CustomLevelObject customWObject = ScriptableObjectHelpers.CloneScriptableObject<LevelObject, CustomLevelObject>(curWeighted.selection);
-                        customWObject.name = curWeighted.selection.name;
-                        if (!oldToNewMapping.ContainsKey(curWeighted.selection))
-                        {
-                            oldToNewMapping.Add(curWeighted.selection, customWObject);
-                        }
-                        objct.levelObject.MarkAsNeverUnload();
-                        customWObject.MarkAsNeverUnload();
-                        curWeighted.selection = customWObject;
-                    }
-                    objct.MarkAsNeverUnload();
-                    continue;
-                }
+                if (objct.levelObject == null) continue;
+
                 CustomLevelObject customizedObject = ScriptableObjectHelpers.CloneScriptableObject<LevelObject, CustomLevelObject>(objct.levelObject);
                 customizedObject.name = objct.levelObject.name;
                 if (!oldToNewMapping.ContainsKey(objct.levelObject))
@@ -867,71 +724,29 @@ PRESS ALT+F4 TO EXIT THE GAME.
         }
     }
 
-
-    //Handle patching appropiate functions to allow for the version number to be patched
-    [HarmonyPatch(typeof(NameManager))]
-    [HarmonyPatch("Awake")]
-    public class InjectAPINameName
-    {
-        static void Postfix(NameManager __instance)
-        {
-            //the version number stuff
-            Transform t = __instance.transform.parent.Find("Version Number");
-            TMPro.TMP_Text text = t.gameObject.GetComponent<TMPro.TMP_Text>();
-            text.text += "\nAPI " + MTM101BaldiDevAPI.VersionNumber;
-            t.localPosition += new Vector3(0f, 28f);
-            if (MTM101BaldiDevAPI.CalledInitialize) return;
-            if (GameObject.Find("NameList")) { GameObject.Find("NameList").GetComponent<AudioSource>().enabled = false; }
-
-        }
-    }
-
-    [HarmonyPatch(typeof(MenuInitializer))]
-    [HarmonyPatch("Start")]
-    public class CallAPIInitializationFunctions
-    {
-        static void Prefix()
-        {
-            if (MTM101BaldiDevAPI.CalledInitialize) return;
-            // define all metadata before we call OnAllAssetsLoaded, so we can atleast be a bit more sure no other mods have activated and added their stuff yet.
-            MTM101BaldiDevAPI.Instance.StartCoroutine(MTM101BaldiDevAPI.Instance.ReloadScenes());
-        }
-    }
-
     [HarmonyPatch(typeof(MainMenu))]
     [HarmonyPatch("Start")]
     class InjectAPIMainName
     {
         static void Postfix(MainMenu __instance)
         {
-            Transform reminder = __instance.transform.Find("Reminder");
+            if (MTM101BaldiDevAPI.CalledInitialize) return;
+
+            Transform reminder = __instance.transform.Find("Version");
             TMPro.TMP_Text text = reminder.gameObject.GetComponent<TMPro.TMP_Text>();
-            text.gameObject.SetActive(true); // so the pre-releases don't hide the version number
-            text.text = "Modding API " + MTM101BaldiDevAPI.VersionNumber;
-            text.gameObject.transform.position += new Vector3(-11f,0f, 0f);
-            if (!MTM101BaldiDevAPI.Instance.attemptOnline.Value)
+            text.text = text.text.Trim() + "\nModding API " + MTM101BaldiDevAPI.VersionNumber;
+            if (MTM101BaldiDevAPI.Instance.attemptOnline.Value)
             {
-                return;
+                //text.raycastTarget = true;
+                //StandardMenuButton button = text.gameObject.ConvertToButton<StandardMenuButton>();
+                //button.underlineOnHigh = true;
+                //button.OnPress.AddListener(() => { Application.OpenURL("https://gamebanana.com/mods/383711"); });
             }
-            text.raycastTarget = true;
-            StandardMenuButton button = text.gameObject.ConvertToButton<StandardMenuButton>();
-            button.underlineOnHigh = true;
-            if (MTM101BaldiDevAPI.Instance.newestGBVersion != "unknown")
-            {
-                if (new Version(MTM101BaldiDevAPI.Instance.newestGBVersion) > MTM101BaldiDevAPI.Version)
-                {
-                    text.text += "\nOutdated!\n(Latest is " + MTM101BaldiDevAPI.Instance.newestGBVersion + ")";
-                }
-                else if (MTM101BaldiDevAPI.Version > new Version(MTM101BaldiDevAPI.Instance.newestGBVersion))
-                {
-                    text.text += "\nUnreleased!";
-                }
-            }
-            else
-            {
-                text.text += "\nUnable to connect!";
-            }
-            button.OnPress.AddListener(() => { Application.OpenURL("https://gamebanana.com/mods/383711"); });
+
+            __instance.gameObject.SetActive(false);
+
+            // define all metadata before we call OnAllAssetsLoaded, so we can atleast be a bit more sure no other mods have activated and added their stuff yet.
+            MTM101BaldiDevAPI.Instance.StartCoroutine(MTM101BaldiDevAPI.Instance.ReloadScenes());
         }
     }
 }

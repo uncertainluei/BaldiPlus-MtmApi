@@ -14,15 +14,7 @@ namespace MTM101BaldAPI.Registers
         public bool randomlyGenerated {
             get
             {
-                if (_value.levelObject != null)
-                {
-                    return true;
-                }
-                if (_value.randomizedLevelObject != null)
-                {
-                    return _value.randomizedLevelObject.Length > 0;
-                }
-                return false;
+                return _value.levelObject != null;
             }
         }
         public int number => _value.levelNo;
@@ -38,15 +30,6 @@ namespace MTM101BaldAPI.Registers
         {
             _info = info;
             _value = obj;
-        }
-
-        /// <summary>
-        /// Get the level types supported by this SceneObject.
-        /// </summary>
-        /// <returns></returns>
-        public LevelType[] GetSupportedLevelTypes()
-        {
-            return value.GetCustomLevelObjects().Select(x => x.type).Distinct().ToArray();
         }
     }
 

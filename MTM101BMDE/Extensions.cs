@@ -111,39 +111,6 @@ namespace MTM101BaldAPI
         }
 
         /// <summary>
-        /// Get the index of the cell at the specified position, returns -1 if there is no cell with that position.
-        /// </summary>
-        /// <param name="me"></param>
-        /// <param name="x"></param>
-        /// <param name="y"></param>
-        /// <returns>The index in the cells array of the cell with the specific position, -1 if there is no cell in that position.</returns>
-        public static int GetCellIndexAt(this RoomAsset me, int x, int y)
-        {
-            for (int i = 0; i < me.cells.Count; i++)
-            {
-                if ((me.cells[i].pos.x == x) && (me.cells[i].pos.z == y))
-                {
-                    return i;
-                }
-            }
-            return -1;
-        }
-
-        /// <summary>
-        /// Gets the cell at the specified position, returns null if there is no cell at that position.
-        /// </summary>
-        /// <param name="me"></param>
-        /// <param name="x"></param>
-        /// <param name="y"></param>
-        /// <returns>The cell at the specified position or null if it does not exist.</returns>
-        public static CellData GetCellAt(this RoomAsset me, int x, int y)
-        {
-            int index = me.GetCellIndexAt(x, y);
-            if (index == -1) return null;
-            return me.cells[index];
-        }
-
-        /// <summary>
         /// Sets the main texture of the material, uses the appropiate variable names for BB+ shaders.
         /// </summary>
         /// <param name="me"></param>

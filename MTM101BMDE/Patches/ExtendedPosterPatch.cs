@@ -71,8 +71,8 @@ namespace MTM101BaldAPI.Patches
 
     [HarmonyPatch(typeof(EnvironmentController))]
     [HarmonyPatch("BuildPoster")]
-    [HarmonyPatch(new Type[] { typeof(PosterObject), typeof(Cell), typeof(Direction), typeof(bool) })]
-    [HarmonyPatch(new Type[] { typeof(PosterObject), typeof(Cell), typeof(Direction), typeof(System.Random) })]
+    [HarmonyPatch(new Type[] { typeof(PosterObject), typeof(TileController), typeof(Direction), typeof(bool) })]
+    [HarmonyPatch(new Type[] { typeof(PosterObject), typeof(TileController), typeof(Direction), typeof(System.Random) })]
     class ExtendedPosterEvenWithoutTextPatch
     {
         static void Prefix(PosterObject poster, out bool __state)

@@ -29,7 +29,6 @@ namespace MTM101BaldAPI.SaveSystem
         
         public PartialModdedSavedGame(ModdedSaveGame saveGame)
         {
-            seed = saveGame.seed;
             mods = ModdedSaveGame.ModdedSaveGameHandlers.Keys.ToArray();
             tags = new Dictionary<string, string[]>();
             foreach (KeyValuePair<string, string[]> kvp in saveGame.modTags)
@@ -91,8 +90,7 @@ namespace MTM101BaldAPI.SaveSystem
 
         public ModdedItemIdentifier(ItemObject objct)
         {
-            ItemMetaData meta = objct.GetMeta();
-            if (meta == null) throw new NullReferenceException("Object: " + objct.name + " doesn't have meta! Can't create ModdedItemIdentifier!");
+            ItemMetaData meta = objct.GetMeta() ?? throw new NullReferenceException("Object: " + objct.name + " doesn't have meta! Can't create ModdedItemIdentifier!");
             version = 0;
             itemPluginGUID = meta.info.Metadata.GUID;
             itemObjectName = objct.name;
@@ -100,10 +98,12 @@ namespace MTM101BaldAPI.SaveSystem
 
         public static ModdedItemIdentifier Read(BinaryReader reader)
         {
-            ModdedItemIdentifier dent = new ModdedItemIdentifier();
-            dent.version = reader.ReadByte();
-            dent.itemPluginGUID = reader.ReadString();
-            dent.itemObjectName = reader.ReadString();
+            ModdedItemIdentifier dent = new ModdedItemIdentifier
+            {
+                version = reader.ReadByte(),
+                itemPluginGUID = reader.ReadString(),
+                itemObjectName = reader.ReadString()
+            };
             return dent;
         }
     }
@@ -120,7 +120,6 @@ namespace MTM101BaldAPI.SaveSystem
     public enum SceneIndexMethod : byte
     {
         Metadata, // this is the one that should almost always be used under every circumstance.
-        Legacy, // this is for vanilla SceneObjects that haven't had metadata added yet.
         Name // this is for modded SceneObjects that haven't had metadata added yet.
     }
 
@@ -157,9 +156,6 @@ namespace MTM101BaldAPI.SaveSystem
                 case SceneIndexMethod.Name:
                     MTM101BaldiDevAPI.Log.LogWarning("Attempted to find SceneObject via name in a SceneObjectIdentifier! (" + v + ")");
                     return Resources.FindObjectsOfTypeAll<SceneObject>().First(x => x.name == v);
-                case SceneIndexMethod.Legacy:
-                    MTM101BaldiDevAPI.Log.LogWarning("Attempted to find SceneObject via index in a SceneObjectIdentifier! (" + v + ")");
-                    return MTM101BaldiDevAPI.gameLoader.list.scenes[int.Parse(v)];
             }
             return null;
         }
@@ -170,54 +166,30 @@ namespace MTM101BaldAPI.SaveSystem
     /// </summary>
     public class ModdedSaveGame
     {
-        public List<ModdedItemIdentifier> items = new List<ModdedItemIdentifier>();
-        public List<ModdedItemIdentifier> lockerItems = new List<ModdedItemIdentifier>();
         public Dictionary<string, string[]> modTags = new Dictionary<string, string[]>();
-        private SceneObjectIdentifier _level;
-        public SceneObject level
-        {
-            get
-            {
-                if (!saveAvailable) return null;
-                return _level.GetSceneObject();
-            }
-            set
-            {
-                SceneObjectMetadata meta = value.GetMeta();
-                if (meta != null)
-                {
-                    _level = new SceneObjectIdentifier(SceneIndexMethod.Metadata, meta.info.Metadata.GUID + "\0" + meta.value.name);
-                    return;
-                }
-                MTM101BaldiDevAPI.Log.LogWarning("Had to resort to fallback for: " + value.name + "!");
-                int foundIndex = MTM101BaldiDevAPI.gameLoader.list.scenes.ToList().IndexOf(value);
-                if (foundIndex != -1)
-                {
-                    _level = new SceneObjectIdentifier(SceneIndexMethod.Legacy, foundIndex.ToString());
-                    return;
-                }
-                _level = new SceneObjectIdentifier(SceneIndexMethod.Name, value.name);
-            }
-        }
-        public int ytps = 0;
-        public int lives = 2;
-        public int attempts = 0;
-        public int seed = 0;
+        //private SceneObjectIdentifier _level;
+        //public SceneObject level
+        //{
+        //    get
+        //    {
+        //        if (!saveAvailable) return null;
+        //        return _level.GetSceneObject();
+        //    }
+        //    set
+        //    {
+        //        SceneObjectMetadata meta = value.GetMeta();
+        //        if (meta != null)
+        //        {
+        //            _level = new SceneObjectIdentifier(SceneIndexMethod.Metadata, meta.info.Metadata.GUID + "\0" + meta.value.name);
+        //            return;
+        //        }
+        //        MTM101BaldiDevAPI.Log.LogWarning("Had to resort to fallback for: " + value.name + "!");
+        //        _level = new SceneObjectIdentifier(SceneIndexMethod.Name, value.name);
+        //    }
+        //}
+
         public const int version = 6;
         public bool saveAvailable = false;
-        public bool fieldTripPlayed = false;
-        public bool johnnyHelped = false;
-        public bool mapPurchased;
-        public bool mapAvailable;
-        public bool[] foundMapTiles = new bool[0];
-        public List<Vector2> markerPositions = new List<Vector2>();
-        public List<int> markerIds = new List<int>();
-        public int mapSizeX = 0;
-        public int mapSizeZ = 0;
-        public LifeMode lifeMode = LifeMode.Normal;
-        public bool timeLimitChallenge = false;
-        public bool mapChallenge = false;
-        public bool inventoryChallenge = false;
         internal static Dictionary<string, ModdedSaveGameIOBinary> ModdedSaveGameHandlers = new Dictionary<string, ModdedSaveGameIOBinary>();
 
 
@@ -261,48 +233,6 @@ namespace MTM101BaldAPI.SaveSystem
                 }
             }
             if (!saveAvailable) return;
-            _level.Write(writer);
-            writer.Write(seed);
-            writer.Write(ytps);
-            writer.Write(lives);
-            writer.Write(attempts);
-            writer.Write((int)lifeMode);
-            writer.Write(fieldTripPlayed);
-            writer.Write(mapAvailable);
-            writer.Write(mapPurchased);
-            writer.Write(johnnyHelped);
-            // if i wasn't lazy i'd merge these into a byte and write that
-            writer.Write(timeLimitChallenge);
-            writer.Write(mapChallenge);
-            writer.Write(inventoryChallenge);
-            writer.Write(mapSizeX);
-            writer.Write(mapSizeZ);
-            writer.Write(foundMapTiles.Length);
-            for (int i = 0; i < foundMapTiles.Length; i++)
-            {
-                writer.Write(foundMapTiles[i]);
-            }
-            writer.Write(markerIds.Count);
-            for (int i = 0; i < markerIds.Count; i++)
-            {
-                writer.Write(markerIds[i]);
-            }
-            writer.Write(markerPositions.Count);
-            for (int i = 0; i < markerPositions.Count; i++)
-            {
-                writer.Write(markerPositions[i].x);
-                writer.Write(markerPositions[i].y);
-            }
-            writer.Write(items.Count);
-            for (int i = 0; i < items.Count; i++)
-            {
-                items[i].Write(writer);
-            }
-            writer.Write(lockerItems.Count);
-            for (int i = 0; i < lockerItems.Count; i++)
-            {
-                lockerItems[i].Write(writer);
-            }
             foreach (KeyValuePair<string, ModdedSaveGameIOBinary> kvp in ModdedSaveGameHandlers)
             {
                 kvp.Value.Save(writer);
@@ -421,77 +351,7 @@ namespace MTM101BaldAPI.SaveSystem
                 }
             }
             if (!saveAvailable) return ModdedSaveLoadStatus.NoSave;
-            if (version >= 4)
-            {
-                _level = SceneObjectIdentifier.Read(reader);
-            }
-            else
-            {
-                _level = new SceneObjectIdentifier(SceneIndexMethod.Legacy, reader.ReadInt32().ToString());
-            }
-            seed = reader.ReadInt32();
-            ytps = reader.ReadInt32();
-            lives = reader.ReadInt32();
-            if (version >= 5)
-            {
-                attempts = reader.ReadInt32();
-                lifeMode = (LifeMode)reader.ReadInt32();
-            }
-            fieldTripPlayed = reader.ReadBoolean();
-            if (version >= 2)
-            {
-                mapAvailable = reader.ReadBoolean();
-                mapPurchased = reader.ReadBoolean();
-                johnnyHelped = reader.ReadBoolean();
-            }
-            if (version >= 6)
-            {
-                timeLimitChallenge = reader.ReadBoolean();
-                mapChallenge = reader.ReadBoolean();
-                inventoryChallenge = reader.ReadBoolean();
-            }
-            mapSizeX = reader.ReadInt32();
-            mapSizeZ = reader.ReadInt32();
-            int foundTilesLength = reader.ReadInt32();
-            foundMapTiles = new bool[foundTilesLength];
-            for (int i = 0; i < foundTilesLength; i++)
-            {
-                foundMapTiles[i] = reader.ReadBoolean();
-            }
-            markerIds.Clear();
-            markerPositions.Clear();
-            if (version >= 5)
-            {
-                int markerIdCount = reader.ReadInt32();
-                for (int i = 0; i < markerIdCount; i++)
-                {
-                    markerIds.Add(reader.ReadInt32());
-                }
-                int markerPositionCount = reader.ReadInt32();
-                for (int i = 0; i < markerPositionCount; i++)
-                {
-                    markerPositions.Add(new Vector2(reader.ReadSingle(), reader.ReadSingle()));
-                }
-            }
-            items.Clear();
-            int itemCount = reader.ReadInt32();
-            for (int i = 0; i < itemCount; i++)
-            {
-                ModdedItemIdentifier ident = ModdedItemIdentifier.Read(reader);
-                if (ident.LocateObject() == null) return ModdedSaveLoadStatus.MissingItems;
-                items.Add(ident);
-            }
-            // load lockers if we are in a save version that supports them
-            if (version >= 2)
-            {
-                int lockerItemCount = reader.ReadInt32();
-                for (int i = 0; i < lockerItemCount; i++)
-                {
-                    ModdedItemIdentifier ident = ModdedItemIdentifier.Read(reader);
-                    if (ident.LocateObject() == null) return ModdedSaveLoadStatus.MissingItems;
-                    lockerItems.Add(ident);
-                }
-            }
+            
             // seperate the verification from the actual reading part so we dont partially load mod stuff.
             // we can gurantee that we can reset this class but nothing about the others.
             if (!tagsMatch) return ModdedSaveLoadStatus.MismatchedTags;

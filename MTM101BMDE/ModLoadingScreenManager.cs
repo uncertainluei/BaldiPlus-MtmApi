@@ -48,18 +48,9 @@ namespace MTM101BaldAPI
             public int count;
         }
 
-        void CreateRandomQMark()
-        {
-            Sprite selectedSprite = MTM101BaldiDevAPI.Instance.questionMarkSprites[UnityEngine.Random.Range(0, MTM101BaldiDevAPI.Instance.questionMarkSprites.Length)];
-            UIHelpers.CreateImage(selectedSprite, this.transform, new Vector2(UnityEngine.Random.Range(-230f, 230f), UnityEngine.Random.Range(-170f, 170f)), false).transform.SetAsFirstSibling();
-        }
 
         void Start()
         {
-            for (int i = 0; i < 8; i++)
-            {
-                CreateRandomQMark();
-            }
             apiLoadingBar = CreateBar(new Vector2(24f, 164f), 55);
             modLoadingBar = CreateBar(new Vector2(24f, 164f + 80f), 55);
             TextMeshProUGUI loadingText = UIHelpers.CreateText<TextMeshProUGUI>(BaldiFonts.ComicSans36, "Loading...", this.transform, new Vector3(24f + (54f * 4f), 98f), true);
@@ -95,9 +86,8 @@ namespace MTM101BaldAPI
         void LoadingEnded()
         {
             Singleton<GlobalCam>.Instance.Transition(UiTransition.Dither, 0.01666667f * 2.5f);
-            if (GameObject.Find("NameList")) { GameObject.Find("NameList").GetComponent<AudioSource>().enabled = true; }
             CursorController.Instance.DisableClick(false);
-            Destroy(this.gameObject);
+            Destroy(transform.parent.gameObject);
         }
 
         IEnumerator LoadEnumerator()
@@ -136,7 +126,6 @@ namespace MTM101BaldAPI
                 {
                     textToChange.text = (string)numerator.Current;
                     totalSteps++;
-                    CreateRandomQMark();
                     SetBarValue(barToAdjust, (float)totalSteps / (float)maxSteps);
                 }
                 yield return null;
@@ -145,49 +134,13 @@ namespace MTM101BaldAPI
             yield break;
         }
 
-        static readonly FieldInfo _potentialItems = AccessTools.Field(typeof(FieldTripBaseRoomFunction), "potentialItems");
-        static readonly FieldInfo _guaranteedItems = AccessTools.Field(typeof(FieldTripBaseRoomFunction), "guaranteedItems");
-
-        IEnumerator ModifyFieldtripLoot(FieldTripObject trip)
-        {
-            yield return GeneratorManagement.fieldtripLootChanges.Count;
-            yield return "Loading...";
-            FieldTripBaseRoomFunction roomFunction = trip.tripHub.room.roomFunctionContainer.GetComponent<FieldTripBaseRoomFunction>();
-            FieldTripLoot tripLoot = new FieldTripLoot();
-            tripLoot.potentialItems = ((WeightedItemObject[])_potentialItems.GetValue(roomFunction)).ToList();
-            tripLoot.guaranteedItems = ((List<ItemObject>)_guaranteedItems.GetValue(roomFunction)).ToList();
-            foreach (KeyValuePair<BaseUnityPlugin, Action<FieldTrips, FieldTripLoot>> kvp in GeneratorManagement.fieldtripLootChanges)
-            {
-                yield return kvp.Key;
-                kvp.Value.Invoke(trip.trip, tripLoot);
-            }
-            if (GeneratorManagement.fieldtripLootChanges.Count > 0)
-            {
-                trip.MarkAsNeverUnload();
-                trip.tripHub.room.MarkAsNeverUnload();
-                trip.tripHub.room.roomFunctionContainer.MarkAsNeverUnload();
-            }
-            _potentialItems.SetValue(roomFunction, tripLoot.potentialItems.ToArray());
-            _guaranteedItems.SetValue(roomFunction, tripLoot.guaranteedItems.ToList());
-        }
-
-
         IEnumerator MainLoad()
         {
             SceneObject[] objs = Resources.FindObjectsOfTypeAll<SceneObject>().Where(x =>
             {
-                if (x.levelObject != null)
-                {
-                    return true;
-                }
-                if (x.randomizedLevelObject != null)
-                {
-                    return x.randomizedLevelObject.Length > 0;
-                }
-                return false;
+                return x.levelObject != null;
             }).ToArray();
-            FieldTripObject[] foundTrips = Resources.FindObjectsOfTypeAll<FieldTripObject>().Where(x => x.tripHub != null).ToArray(); // ignore junk
-            yield return (3 + objs.Length) + LoadingEvents.LoadingEventsPost.Count + LoadingEvents.LoadingEventsPre.Count + LoadingEvents.LoadingEventsStart.Count + foundTrips.Length;
+            yield return (3 + objs.Length) + LoadingEvents.LoadingEventsPost.Count + LoadingEvents.LoadingEventsPre.Count + LoadingEvents.LoadingEventsStart.Count;
             for (int i = 0; i < LoadingEvents.LoadingEventsStart.Count; i++)
             {
                 LoadingEvents.LoadingEvent load = LoadingEvents.LoadingEventsStart[i];
@@ -220,24 +173,8 @@ namespace MTM101BaldAPI
                         continue;
                     }
                 }
-                if (obj.randomizedLevelObject != null)
-                {
-                    for (int i = 0; i < obj.randomizedLevelObject.Length; i++)
-                    {
-                        if (!(obj.randomizedLevelObject[i].selection is CustomLevelObject))
-                        {
-                            MTM101BaldiDevAPI.Log.LogWarning(String.Format("Can't invoke SceneObject({0})({2}) Generation Changes for {1}! Not a CustomLevelObject!", obj.levelTitle, obj.randomizedLevelObject[i].selection.ToString(), obj.levelNo.ToString()));
-                            continue;
-                        }
-                    }
-                }
                 MTM101BaldiDevAPI.Log.LogInfo(String.Format("Invoking SceneObject({0})({1}) Generation Changes!", obj.levelTitle, obj.levelNo.ToString()));
                 GeneratorManagement.Invoke(obj.levelTitle, obj.levelNo, obj);
-            }
-            foreach (FieldTripObject trip in foundTrips)
-            {
-                yield return "Changing " + trip.name + " loot...";
-                yield return BeginLoadEnumerator(ModifyFieldtripLoot(trip), modLoadingBar, modLoadText);
             }
             modLoadText.text = "";
             modIdText.text = "";

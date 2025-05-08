@@ -7,13 +7,14 @@ using UnityEngine;
 
 namespace MTM101BaldAPI.Patches
 {
-    [HarmonyPatch(typeof(PlayerManager))]
-    [HarmonyPatch("Start")]
-    internal class PlayerManagerStartPatch
-    {
-        private static void Postfix(PlayerManager __instance)
-        {
-            __instance.GetMovementStatModifier();
-        }
-    }
+    //TBA
+    //[HarmonyPatch(typeof(PlayerManager))]
+    //[HarmonyPatch("Start")]
+    //internal class PlayerManagerStartPatch
+    //{
+    //    private static void Postfix(PlayerManager __instance)
+    //    {
+    //        __instance.GetMovementStatModifier();
+    //    }
+    //}
 }
