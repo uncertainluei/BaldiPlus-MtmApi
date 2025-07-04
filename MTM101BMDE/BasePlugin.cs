@@ -849,7 +849,7 @@ PRESS ALT+F4 TO EXIT THE GAME.
             allowWindowTitleChange = Config.Bind("Technical",
                 "Allow Window Title Change",
                 true,
-                "Allow the API to change the game's window title to reflect the fact that it's been modded.");
+                "(Windows only) Allow the API to change the game's window title to reflect the fact that it's been modded.");
 
             usingMidiFix = Config.Bind("Technical",
                 "Use Midi Fix",
@@ -899,11 +899,9 @@ PRESS ALT+F4 TO EXIT THE GAME.
                 StartCoroutine(GetCurrentGamebananaVersion());
             }
 
-            //set window title
-            if (allowWindowTitleChange.Value)
-            {
+            //set window title, only works on Windows systems
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows) && allowWindowTitleChange.Value)
                 WindowTitle.SetText(Application.productName + " (Modded)");
-            }
         }
     }
 
