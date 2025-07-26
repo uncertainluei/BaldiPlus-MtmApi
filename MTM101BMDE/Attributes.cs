@@ -21,28 +21,7 @@ namespace MTM101BaldAPI
         {
             AccessTools.GetTypesFromAssembly(assembly).Do(type =>
             {
-                foreach (CustomAttributeData cad in type.CustomAttributes)
-                {
-                    if (typeof(ConditionalPatch).IsAssignableFrom(cad.AttributeType))
-                    {
-                        List<CustomAttributeTypedArgument> list = cad.ConstructorArguments.ToList();
-                        List<object> paramList = new List<object>();
-                        list.ForEach(arg =>
-                        {
-                            paramList.Add(arg.Value);
-                        });
-                        ConditionalPatch condP = (ConditionalPatch)Activator.CreateInstance(cad.AttributeType, paramList.ToArray());
-                        if (condP.ShouldPatch())
-                        {
-                            _harmony.CreateClassProcessor(type).Patch();
-                        }
-                        return;
-                    }
-                }
-                if (assumeUnmarkedAsTrue)
-                {
-                    _harmony.CreateClassProcessor(type).Patch();
-                }
+                _harmony.PatchAllConditionals(type, assumeUnmarkedAsTrue);
             });
         }
 
@@ -56,9 +35,38 @@ namespace MTM101BaldAPI
             Assembly assembly = method.ReflectedType.Assembly;
             _harmony.PatchAllConditionals(assembly);
         }
+
+        /// <summary>
+        /// Patches all conditional patches with the specified type
+        /// </summary>
+        public static void PatchAllConditionals(this Harmony _harmony, Type type, bool assumeUnmarkedAsTrue = true)
+        {
+            foreach (CustomAttributeData cad in type.CustomAttributes)
+            {
+                if (typeof(ConditionalPatch).IsAssignableFrom(cad.AttributeType))
+                {
+                    List<CustomAttributeTypedArgument> list = cad.ConstructorArguments.ToList();
+                    List<object> paramList = new List<object>();
+                    list.ForEach(arg =>
+                    {
+                        paramList.Add(arg.Value);
+                    });
+                    ConditionalPatch condP = (ConditionalPatch)Activator.CreateInstance(cad.AttributeType, paramList.ToArray());
+                    if (condP.ShouldPatch())
+                    {
+                        _harmony.CreateClassProcessor(type).Patch();
+                    }
+                    return;
+                }
+            }
+            if (assumeUnmarkedAsTrue)
+            {
+                _harmony.CreateClassProcessor(type).Patch();
+            }
+        }
     }
 
-    /// <summary>
+    /// <summary>X
     /// Base class for ConditionalPatches.
     /// </summary>
     public abstract class ConditionalPatch : Attribute
