@@ -814,14 +814,6 @@ namespace MTM101BaldAPI.AssetTools
         /// <returns></returns>
         public static Cubemap CubemapFromTexture(Texture2D texture)
         {
-            // Convert from FADE layout if texture's aspect ratio is 6x1, will likely be removed later on
-            if (texture.width / texture.height == 6)
-            {
-                MTM101BaldiDevAPI.Log.LogWarning("Attempting to load FADE cubemap! This will be removed soon!");
-                return CubemapFromTextureLegacy(texture);
-            }
-
-            // MTM101API layout
             int width = texture.width / 4;
             texture.Rotate180(false);
 
@@ -839,24 +831,6 @@ namespace MTM101BaldAPI.AssetTools
             // Rotate texture back to normal
             texture.Rotate180(false);
 
-            return cubemap;
-        }
-
-        static Cubemap CubemapFromTextureLegacy(Texture2D texture)
-        {
-            int width = texture.width / 6;
-            texture.Rotate180(false);
-
-            Cubemap cubemap = new Cubemap(width, TextureFormat.RGB24, false);
-            cubemap.name = texture.name;
-            cubemap.SetPixels(texture.GetPixels(0, 0, width, width), CubemapFace.NegativeZ);
-            cubemap.SetPixels(texture.GetPixels(width, 0, width, width), CubemapFace.PositiveZ);
-            cubemap.SetPixels(texture.GetPixels(width * 2, 0, width, width), CubemapFace.NegativeY);
-            cubemap.SetPixels(texture.GetPixels(width * 3, 0, width, width), CubemapFace.PositiveY);
-            cubemap.SetPixels(texture.GetPixels(width * 4, 0, width, width), CubemapFace.NegativeX);
-            cubemap.SetPixels(texture.GetPixels(width * 5, 0, width, width), CubemapFace.PositiveX);
-
-            texture.Rotate180(false);
             return cubemap;
         }
 
