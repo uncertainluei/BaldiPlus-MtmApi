@@ -194,6 +194,9 @@ namespace MTM101BaldAPI
                 }
                 return false;
             }).ToArray();
+            List<SceneObject> objList = new List<SceneObject>(objs);
+            objList.Sort((a,b) => (b.manager is MainGameManager).CompareTo((a.manager is MainGameManager)));
+            objs = objList.ToArray();
             FieldTripObject[] foundTrips = Resources.FindObjectsOfTypeAll<FieldTripObject>().Where(x => x.tripHub != null).ToArray(); // ignore junk
             yield return (5 + objs.Length) + LoadingEvents.LoadingEventsPost.Count + LoadingEvents.LoadingEventsPre.Count + LoadingEvents.LoadingEventsStart.Count + foundTrips.Length + LoadingEvents.LoadingEventsFinal.Count;
             for (int i = 0; i < LoadingEvents.LoadingEventsStart.Count; i++)
@@ -243,6 +246,7 @@ namespace MTM101BaldAPI
                 GeneratorManagement.Invoke(obj.levelTitle, obj.levelNo, obj);
             }
             yield return "Changing modded SceneObjects...";
+            GeneratorManagement.queuedModdedScenes.Sort((a, b) => (b.manager is MainGameManager).CompareTo((a.manager is MainGameManager)));
             while (GeneratorManagement.queuedModdedScenes.Count > 0)
             {
                 SceneObject obj = GeneratorManagement.queuedModdedScenes[0];
