@@ -539,6 +539,40 @@ namespace MTM101BaldAPI.AssetTools
         }
 
         /// <summary>
+        /// Generates a spritesheet from the specified atlas, with the specified sprite count and size.
+        /// Left to right, top to bottom.
+        /// </summary>
+        /// <param name="atlas"></param>
+        /// <param name="spriteWidth"></param>
+        /// <param name="spriteHeight"></param>
+        /// <param name="totalSprites"></param>
+        /// <param name="pixelsPerUnit"></param>
+        /// <returns></returns>
+        public static Sprite[] SpritesFromSpriteSheetCount(Texture2D atlas, int spriteWidth, int spriteHeight, float pixelsPerUnit, int totalSprites = 0)
+        {
+            int horizontalTiles = atlas.width / spriteWidth;
+            int verticalTiles = atlas.height / spriteHeight;
+
+            if (totalSprites == 0)
+                totalSprites = horizontalTiles * verticalTiles;
+            Sprite[] array = new Sprite[totalSprites];
+
+            Vector2 center = Vector2.one / 2f;
+
+            int i = 0;
+            for (int y = verticalTiles - 1; y >= 0; y--)
+            {
+                for (int x = 0; x < horizontalTiles && i < totalSprites; x++)
+                {
+                    Sprite sprite = Sprite.Create(atlas, new Rect(x * spriteWidth, y * spriteHeight, spriteWidth, spriteHeight), center, pixelsPerUnit, 0u, SpriteMeshType.FullRect);
+                    sprite.name = atlas.name + "_" + i;
+                    array[i++] = sprite;
+                }
+            }
+            return array;
+        }
+
+        /// <summary>
         /// Convert a stream to a byte array.
         /// </summary>
         /// <param name="stream"></param>
@@ -814,11 +848,6 @@ namespace MTM101BaldAPI.AssetTools
         /// <returns></returns>
         public static Cubemap CubemapFromTexture(Texture2D texture)
         {
-            // Convert from FADE layout if texture's aspect ratio is 6x1, will likely be removed later on
-            if (texture.width/texture.height == 6)
-                return CubemapFromTextureLegacy(texture);
-
-            // MTM101API layout
             int width = texture.width / 4;
             texture.Rotate180(false);
 
@@ -836,24 +865,6 @@ namespace MTM101BaldAPI.AssetTools
             // Rotate texture back to normal
             texture.Rotate180(false);
 
-            return cubemap;
-        }
-
-        static Cubemap CubemapFromTextureLegacy(Texture2D texture)
-        {
-            int width = texture.width / 6;
-            texture.Rotate180(false);
-
-            Cubemap cubemap = new Cubemap(width, TextureFormat.RGB24, false);
-            cubemap.name = texture.name;
-            cubemap.SetPixels(texture.GetPixels(0, 0, width, width), CubemapFace.NegativeZ);
-            cubemap.SetPixels(texture.GetPixels(width, 0, width, width), CubemapFace.PositiveZ);
-            cubemap.SetPixels(texture.GetPixels(width * 2, 0, width, width), CubemapFace.NegativeY);
-            cubemap.SetPixels(texture.GetPixels(width * 3, 0, width, width), CubemapFace.PositiveY);
-            cubemap.SetPixels(texture.GetPixels(width * 4, 0, width, width), CubemapFace.NegativeX);
-            cubemap.SetPixels(texture.GetPixels(width * 5, 0, width, width), CubemapFace.PositiveX);
-
-            texture.Rotate180(false);
             return cubemap;
         }
 
@@ -916,7 +927,7 @@ namespace MTM101BaldAPI.AssetTools
             return output;
         }
 
-        static TMP_FontAsset TMPAssetFromFile(string path, int pointSize, int atlasPadding, GlyphRenderMode renderMode = GlyphRenderMode.RASTER_HINTED, int aW = 1024, int aH = 1024, AtlasPopulationMode mode = AtlasPopulationMode.Dynamic)
+        public static TMP_FontAsset TMPAssetFromFile(string path, int pointSize, int atlasPadding, GlyphRenderMode renderMode = GlyphRenderMode.RASTER_HINTED, int aW = 1024, int aH = 1024, AtlasPopulationMode mode = AtlasPopulationMode.Dynamic)
         {
             Font font = new Font(path);
             TMP_FontAsset asset = TMP_FontAsset.CreateFontAsset(font, pointSize, atlasPadding, renderMode, aW, aH, mode);
@@ -924,7 +935,7 @@ namespace MTM101BaldAPI.AssetTools
             return asset;
         }
 
-        static TMP_FontAsset TMPAssetFromMod(BaseUnityPlugin plugin, string[] paths, int pointSize, int atlasPadding, GlyphRenderMode renderMode = GlyphRenderMode.RASTER_HINTED, int aW = 1024, int aH = 1024, AtlasPopulationMode mode = AtlasPopulationMode.Dynamic)
+        public static TMP_FontAsset TMPAssetFromMod(BaseUnityPlugin plugin, string[] paths, int pointSize, int atlasPadding, GlyphRenderMode renderMode = GlyphRenderMode.RASTER_HINTED, int aW = 1024, int aH = 1024, AtlasPopulationMode mode = AtlasPopulationMode.Dynamic)
         {
             List<string> pathz = paths.ToList();
             pathz.Insert(0, GetModPath(plugin));

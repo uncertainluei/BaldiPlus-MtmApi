@@ -39,7 +39,12 @@ namespace MTM101BaldAPI.Registers
         /// <summary>
         /// This item has a variant in the tutorial that must be accounted for when handling MultipleUse.
         /// </summary>
-        HasTutorialVariant = 32
+        HasTutorialVariant = 32,
+        /// <summary>
+        /// This item is a runtime item, generated during the middle of a run.
+        /// It means that this item will automatically be cleaned up when the run is exited.
+        /// </summary>
+        RuntimeItem = 64
     }
 
     public class ItemMetaData : IMetadata<ItemObject>
@@ -143,6 +148,18 @@ namespace MTM101BaldAPI.Registers
             {
                 return !x.flags.HasFlag(flag);
             }).Distinct().ToArray();
+        }
+
+        public override bool Remove(ItemObject toRemove)
+        {
+            ItemMetaData meta = Get(toRemove);
+            if (meta == null) return false;
+            meta.itemObjects = meta.itemObjects.Where(x => x != toRemove).ToArray();
+            if (meta.itemObjects.Length == 0)
+            {
+                return base.Remove(toRemove);
+            }
+            return true;
         }
     }
 }
