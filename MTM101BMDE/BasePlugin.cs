@@ -31,6 +31,8 @@ using UnityEngine.Networking;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using MTM101BaldAPI.ErrorHandler;
+using System.Linq.Expressions;
+using BepInEx.Bootstrap;
 
 namespace MTM101BaldAPI
 {
@@ -56,7 +58,7 @@ namespace MTM101BaldAPI
     {
         internal static ManualLogSource Log = new ManualLogSource("Baldi's Basics Plus Dev API Pre Initialization");
         public const string ModGUID = "mtm101.rulerp.bbplus.baldidevapi";
-        public const string VersionNumber = "9.1.0.0";
+        public const string VersionNumber = "10.0.0.1";
 
         /// <summary>
         /// The version of the API, applicable when BepInEx cache messes up the version number.
@@ -73,7 +75,6 @@ namespace MTM101BaldAPI
         internal ConfigEntry<bool> ignoringTagDisplays;
         internal ConfigEntry<bool> attemptOnline;
         internal ConfigEntry<bool> alwaysModdedSave;
-        internal ConfigEntry<bool> useOldAudioLoad;
         internal ConfigEntry<bool> allowWindowTitleChange;
 
         internal Sprite[] questionMarkSprites;
@@ -82,6 +83,7 @@ namespace MTM101BaldAPI
         public static NPCMetaStorage npcMetadata = new NPCMetaStorage();
         public static RandomEventMetaStorage randomEventStorage = new RandomEventMetaStorage();
         public static SceneObjectMetaStorage sceneMeta = new SceneObjectMetaStorage();
+        public static StickerMetaStorage stickerMeta = new StickerMetaStorage();
 
         internal static AssetManager AssetMan = new AssetManager();
 
@@ -239,6 +241,7 @@ namespace MTM101BaldAPI
             // INITIALIZE ITEM METADATA
             ItemObject grapplingHook = null;
             List<ItemObject> pointObjects = new List<ItemObject>();
+            List<ItemObject> stickerObjects = new List<ItemObject>();
             Resources.FindObjectsOfTypeAll<ItemObject>().Where(x => !x.name.EndsWith("Tutorial")).Do(x =>
             {
                 switch (x.itemType)
@@ -260,7 +263,7 @@ namespace MTM101BaldAPI
                         bm.tags.Add("drink");
                         break;
                     case Items.AlarmClock:
-                        x.AddMeta(this, ItemFlags.Persists | ItemFlags.CreatesEntity).tags.AddRange(new string[] { "technology", "makes_noise" });
+                        x.AddMeta(this, ItemFlags.Persists | ItemFlags.CreatesEntity).tags.UnionWith(new string[] { "technology", "makes_noise" });
                         break;
                     case Items.ChalkEraser:
                         x.AddMeta(this, ItemFlags.Persists | ItemFlags.CreatesEntity);
@@ -338,6 +341,10 @@ namespace MTM101BaldAPI
                     case Items.WeirdKey:
                         x.AddMeta(this, ItemFlags.None).tags.Add("shape_key");
                         break;
+                    case Items.StickerPack:
+                        stickerObjects.Add(x);
+                        //x.AddMeta(this, ItemFlags.InstantUse);
+                        break;
                     default:
                         // modded items start at 256, so we somehow have initialized after the mod in question, ignore the data.
                         if ((int)x.itemType < 256)
@@ -347,6 +354,23 @@ namespace MTM101BaldAPI
                         break;
                 }
             });
+            // handle sticker metadata
+            List<ItemObject> sortedStickerItemMeta = new List<ItemObject>()
+            {
+                stickerObjects.Find(x => x.name == "StickerPack_Normal"),
+                stickerObjects.Find(x => x.name == "StickerPack_Large"),
+                stickerObjects.Find(x => x.name == "StickerPack_Twin"),
+                stickerObjects.Find(x => x.name == "StickerPack_Bonus"),
+                stickerObjects.Find(x => x.name == "StickerPack_Fresh"),
+                stickerObjects.Find(x => x.name == "GlueStick")
+            };
+            stickerObjects.RemoveAll(x => sortedStickerItemMeta.Contains(x));
+            sortedStickerItemMeta.InsertRange(sortedStickerItemMeta.Count - 2, stickerObjects);
+            sortedStickerItemMeta.Reverse();
+            ItemMetaData stickerItemMeta = new ItemMetaData(Info, sortedStickerItemMeta.ToArray());
+            stickerItemMeta.flags = ItemFlags.InstantUse;
+            stickerItemMeta.itemObjects.Do(x => x.AddMeta(stickerItemMeta));
+
             ItemMetaData grappleMeta = new ItemMetaData(Info, (ItemObject[])((ITM_GrapplingHook)grapplingHook.item).ReflectionGetVariable("allVersions"));
             grappleMeta.itemObjects = grappleMeta.itemObjects.AddItem(grapplingHook).ToArray();
             grappleMeta.flags = ItemFlags.CreatesEntity | ItemFlags.MultipleUse | ItemFlags.Persists;
@@ -483,6 +507,7 @@ namespace MTM101BaldAPI
                     case "Tutorial":
                         x.AddMeta(this, new string[] { "tutorial" });
                         break;
+                    case "LightTest":
                     case "EventTest":
                         x.AddMeta(this, new string[] { "debug", "unused" });
                         break;
@@ -491,6 +516,43 @@ namespace MTM101BaldAPI
                         break;
                 }
             });
+
+            // sticker metadata
+            StickerManager stickerMan = Resources.FindObjectsOfTypeAll<StickerManager>().First(x => x.GetInstanceID() >= 0);
+            StickerData[] stickerData = (StickerData[])stickerMan.ReflectionGetVariable("stickerData");
+            List<Sticker> bonusStickers = (List<Sticker>)stickerMan.ReflectionGetVariable("bonusStickers");
+            for (int i = 0; i < stickerData.Length; i++)
+            {
+                if (stickerData[i].sprite == null)
+                {
+                    Log.LogDebug("Sticker: " + ((Sticker)i).ToString() + " has no sprite, assuming unused!");
+                    continue;
+                }
+                if (((Sticker)i) == Sticker.GlueStick)
+                {
+                    stickerMeta.AddSticker(Info, new ExtendedGluestickData()
+                    {
+                        affectsLevelGeneration = stickerData[i].affectsLevelGeneration,
+                        sprite = stickerData[i].sprite,
+                        duplicateOddsMultiplier = stickerData[i].duplicateOddsMultiplier,
+                        sticker = (Sticker)i // okay
+                    });
+                    continue;
+                }
+                stickerMeta.AddSticker(Info, new VanillaCompatibleExtendedStickerData()
+                {
+                    affectsLevelGeneration = stickerData[i].affectsLevelGeneration,
+                    sprite = stickerData[i].sprite,
+                    duplicateOddsMultiplier = stickerData[i].duplicateOddsMultiplier,
+                    sticker = (Sticker)i // okay
+                }).flags |= (bonusStickers.Contains((Sticker)i) ? StickerFlags.IsBonus : StickerFlags.None);
+            }
+            for (int i = 0; i < stickerMan.activeStickerData.Length; i++)
+            {
+                stickerMan.activeStickerData[i] = new ExtendedStickerStateData(stickerMan.activeStickerData[i].sticker, stickerMan.activeStickerData[i].activeLevel, stickerMan.activeStickerData[i].opened, stickerMan.activeStickerData[i].sticky);
+            }
+            stickerMan.applyStickers = false; // ??
+            //stickerMan.ReflectionSetVariable("stickerData", null);
 
             MTM101BaldiDevAPI.CalledInitialize = true;
 
@@ -777,11 +839,6 @@ PRESS ALT+F4 TO EXIT THE GAME.
                 Singleton<ModdedFileManager>.Instance.UpdateCurrentPartialSave();
             });
 
-            useOldAudioLoad = Config.Bind("Technical",
-                "Use Old Audio Loading Method",
-                false,
-                "Whether or not the old legacy method of loading audio should be used. Do not turn on as it is not needed anymore.");
-
             allowWindowTitleChange = Config.Bind("Technical",
                 "Allow Window Title Change",
                 true,
@@ -791,11 +848,6 @@ PRESS ALT+F4 TO EXIT THE GAME.
                 "Use Midi Fix",
                 true,
                 "Whether or not the midi fix should be used to increase the amount of instruments available to the midi player, there shouldn't be a reason for you to disable this.");
-
-            if (useOldAudioLoad.Value)
-            {
-                AddWarningScreen("Old Audio Loading is <b>on!</b>\nYou should not need this anymore as of API 4.0!\nTurn it off, and if mods are still broken, report it to MTM101!", false);
-            }
 
             alwaysModdedSave = Config.Bind("General",
                 "Always Use Modded Save System",
@@ -831,6 +883,13 @@ PRESS ALT+F4 TO EXIT THE GAME.
 
             Log = base.Logger;
 
+            SerializationTest test = new GameObject("Serialization Test", typeof(SerializationTest)).GetComponent<SerializationTest>();
+            test.serializable.boolVal = false;
+            if (Instantiate(test).serializable.boolVal != test.serializable.boolVal)
+            {
+                AddWarningScreen("The <color=yellow>FixPluginTypesSerialization</color> patcher plugin did not load properly!\nMake sure you have it installed in your <color=yellow>BepInEx > patchers</color> folder and try again.\nIf this persists, then it's incompatible with your OS's build of BB+. As such, try running the API in a <color=#00bfff>Windows</color> build of the game under <color=yellow>Wine</color>/<color=yellow>Proton</color>.<line-height=50%>", true);
+                return;
+            }
             /*if (AppDomain.CurrentDomain.GetAssemblies().Where(x => x.FullName.StartsWith("Newtonsoft.Json")).Count() == 0)
             {
                 AddWarningScreen("Newtonsoft.Json is not installed! It should be included with the API zip!", true);
@@ -843,6 +902,23 @@ PRESS ALT+F4 TO EXIT THE GAME.
             //set window title
             if (allowWindowTitleChange.Value)
                 WindowTitle.SetText(Application.productName + " (Modded)");
+        }
+    }
+
+    // This setup is pretty hacky, but I personally did not have anything more ideal -l
+    internal class SerializationTest : MonoBehaviour
+    {
+        [Serializable]
+        internal class TestSerializable
+        {
+            public bool boolVal = true;
+        }
+
+        public TestSerializable serializable = new TestSerializable();
+
+        private void Start()
+        {
+            DestroyImmediate(gameObject);
         }
     }
 

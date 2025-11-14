@@ -21,15 +21,20 @@ namespace MTM101BaldAPI.SaveSystem
         static FieldInfo _cgmbackupItems = AccessTools.Field(typeof(CoreGameManager), "backupItems");
         static FieldInfo _cgmbackupLockerItems = AccessTools.Field(typeof(CoreGameManager), "backupLockerItems");
         static FieldInfo _cgmrestoreItemsOnSpawn = AccessTools.Field(typeof(CoreGameManager), "restoreItemsOnSpawn");
+        static FieldInfo _slotUpgraded = AccessTools.Field(typeof(StickerManager), "slotUpgraded");
 
         public void CreateSavedGameCoreManager(GameLoader loader)
         {
             UnityEngine.Object.Instantiate<CoreGameManager>(loader.cgmPre);
             ModdedSaveGame savedGameData = saveData;
+
+            Singleton<StickerManager>.Instance.activeStickerData = savedGameData.activeStickerData.Select(x => x.MakeCopy()).ToArray();
+            Singleton<StickerManager>.Instance.stickerInventory = savedGameData.stickerInventory.Select(x => x.MakeCopy()).ToList();
+            _slotUpgraded.SetValue(Singleton<StickerManager>.Instance, savedGameData.stickerUpgradeSlots.ToArray());
             Singleton<CoreGameManager>.Instance.SetSeed(savedGameData.seed);
             Singleton<CoreGameManager>.Instance.SetLives(savedGameData.lives, true);
             Singleton<CoreGameManager>.Instance.SetAttempts(savedGameData.attempts);
-            Singleton<CoreGameManager>.Instance.AddPoints(savedGameData.ytps, 0, false, false);
+            Singleton<CoreGameManager>.Instance.AddPoints(savedGameData.ytps, 0, false, false, false);
             Singleton<CoreGameManager>.Instance.tripPlayed = savedGameData.fieldTripPlayed;
             Singleton<CoreGameManager>.Instance.johnnyHelped = savedGameData.johnnyHelped;
             if (savedGameData.mapAvailable)
@@ -246,7 +251,7 @@ namespace MTM101BaldAPI.SaveSystem
                     MTM101BaldiDevAPI.Log.LogWarning("Failed to load save because the tags were mismatched!");
                     Singleton<ModdedFileManager>.Instance.saveData.saveAvailable = false;
                     break;
-                case ModdedSaveLoadStatus.MissingItems:
+                case ModdedSaveLoadStatus.MissingItemsOrStickers:
                     if (ItemMetaStorage.Instance.All().Length == 0) break; //item metadata hasnt loaded yet!
                     MTM101BaldiDevAPI.Log.LogWarning("Failed to load save because one or more items couldn't be found!");
                     Singleton<ModdedFileManager>.Instance.saveData.saveAvailable = false;
@@ -392,8 +397,9 @@ namespace MTM101BaldAPI.SaveSystem
 
     [HarmonyPatch(typeof(CoreGameManager))]
     [HarmonyPatch("Save")]
-    class SaveAndQuitModdedData
+    class SaveModdedData
     {
+        static FieldInfo _slotUpgraded = AccessTools.Field(typeof(StickerManager), "slotUpgraded");
         // override the function completely, if we make sure every reference is referring to ModdedSaveGame, this should leave vanilla games intact.
         static bool Prefix(CoreGameManager __instance, ref int ___lives, ref int ___seed, ref bool[,] ___foundTilesToRestore, ref IntVector2 ___savedMapSize, ref List<Vector2> ___markerPositions, ref List<int> ___markerIds, ref int ___attempts)
         {
@@ -435,6 +441,9 @@ namespace MTM101BaldAPI.SaveSystem
             newSave.foundMapTiles = ___foundTilesToRestore.ConvertTo1d(___savedMapSize.x, ___savedMapSize.z);
             newSave.mapSizeX = ___savedMapSize.x;
             newSave.mapSizeZ = ___savedMapSize.z;
+            newSave.stickerInventory.AddRange(Singleton<StickerManager>.Instance.stickerInventory.Select(x => x.MakeCopy()));
+            newSave.activeStickerData.AddRange(Singleton<StickerManager>.Instance.activeStickerData.Select(x => x.MakeCopy()));
+            newSave.stickerUpgradeSlots = ((bool[])_slotUpgraded.GetValue(Singleton<StickerManager>.Instance)).ToList();
             newSave.FillBlankModTags();
             Singleton<ModdedFileManager>.Instance.saveData = newSave;
             Singleton<PlayerFileManager>.Instance.Save();

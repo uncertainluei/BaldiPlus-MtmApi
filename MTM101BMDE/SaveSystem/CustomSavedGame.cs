@@ -113,7 +113,7 @@ namespace MTM101BaldAPI.SaveSystem
         Success,
         NoSave,
         MissingHandlers,
-        MissingItems,
+        MissingItemsOrStickers,
         MismatchedTags
     }
 
@@ -172,6 +172,11 @@ namespace MTM101BaldAPI.SaveSystem
     {
         public List<ModdedItemIdentifier> items = new List<ModdedItemIdentifier>();
         public List<ModdedItemIdentifier> lockerItems = new List<ModdedItemIdentifier>();
+
+        public List<StickerStateData> activeStickerData = new List<StickerStateData>();
+        public List<StickerStateData> stickerInventory = new List<StickerStateData>();
+        public List<bool> stickerUpgradeSlots = new List<bool>();
+
         public Dictionary<string, string[]> modTags = new Dictionary<string, string[]>();
         private SceneObjectIdentifier _level;
         public SceneObject level
@@ -203,7 +208,7 @@ namespace MTM101BaldAPI.SaveSystem
         public int lives = 2;
         public int attempts = 0;
         public int seed = 0;
-        public const int version = 6;
+        public const int version = 8;
         public bool saveAvailable = false;
         public bool fieldTripPlayed = false;
         public bool johnnyHelped = false;
@@ -302,6 +307,25 @@ namespace MTM101BaldAPI.SaveSystem
             for (int i = 0; i < lockerItems.Count; i++)
             {
                 lockerItems[i].Write(writer);
+            }
+            writer.Write(activeStickerData.Count);
+            for (int i = 0; i < activeStickerData.Count; i++)
+            {
+                // enums are used to identify stickers
+                writer.Write(EnumExtensions.GetExtendedName<Sticker>((int)activeStickerData[i].sticker));
+                activeStickerData[i].Write(writer);
+            }
+            writer.Write(stickerInventory.Count);
+            for (int i = 0; i < stickerInventory.Count; i++)
+            {
+                // enums are used to identify stickers
+                writer.Write(EnumExtensions.GetExtendedName<Sticker>((int)stickerInventory[i].sticker));
+                stickerInventory[i].Write(writer);
+            }
+            writer.Write(stickerUpgradeSlots.Count);
+            for (int i = 0; i < stickerUpgradeSlots.Count; i++)
+            {
+                writer.Write(stickerUpgradeSlots[i]);
             }
             foreach (KeyValuePair<string, ModdedSaveGameIOBinary> kvp in ModdedSaveGameHandlers)
             {
@@ -478,7 +502,7 @@ namespace MTM101BaldAPI.SaveSystem
             for (int i = 0; i < itemCount; i++)
             {
                 ModdedItemIdentifier ident = ModdedItemIdentifier.Read(reader);
-                if (ident.LocateObject() == null) return ModdedSaveLoadStatus.MissingItems;
+                if (ident.LocateObject() == null) return ModdedSaveLoadStatus.MissingItemsOrStickers;
                 items.Add(ident);
             }
             // load lockers if we are in a save version that supports them
@@ -488,8 +512,56 @@ namespace MTM101BaldAPI.SaveSystem
                 for (int i = 0; i < lockerItemCount; i++)
                 {
                     ModdedItemIdentifier ident = ModdedItemIdentifier.Read(reader);
-                    if (ident.LocateObject() == null) return ModdedSaveLoadStatus.MissingItems;
+                    if (ident.LocateObject() == null) return ModdedSaveLoadStatus.MissingItemsOrStickers;
                     lockerItems.Add(ident);
+                }
+            }
+            // handle stickers if we are in a save version that supports them
+            if (version >= 7)
+            {
+                int activeStickerCount = reader.ReadInt32();
+                for (int i = 0; i < activeStickerCount; i++)
+                {
+                    Sticker? stickerEnum;
+                    EnumExtensions.GetFromExtendedNameSafe(reader.ReadString(), out stickerEnum);
+                    if (stickerEnum == null)
+                    {
+                        return ModdedSaveLoadStatus.MissingItemsOrStickers;
+                    }
+                    StickerMetaData meta = StickerMetaStorage.Instance.Get(stickerEnum.Value);
+                    if (meta == null)
+                    {
+                        return ModdedSaveLoadStatus.MissingItemsOrStickers;
+                    }
+                    StickerStateData state = meta.value.CreateStateData(0,true,false);
+                    state.ReadInto(reader);
+                    activeStickerData.Add(state);
+                }
+                int inventoryStickerCount = reader.ReadInt32();
+                for (int i = 0; i < inventoryStickerCount; i++)
+                {
+                    Sticker? stickerEnum;
+                    EnumExtensions.GetFromExtendedNameSafe(reader.ReadString(), out stickerEnum);
+                    if (stickerEnum == null)
+                    {
+                        return ModdedSaveLoadStatus.MissingItemsOrStickers;
+                    }
+                    StickerMetaData meta = StickerMetaStorage.Instance.Get(stickerEnum.Value);
+                    if (meta == null)
+                    {
+                        return ModdedSaveLoadStatus.MissingItemsOrStickers;
+                    }
+                    StickerStateData state = meta.value.CreateStateData(0, true, false);
+                    state.ReadInto(reader);
+                    stickerInventory.Add(state);
+                }
+            }
+            if (version >= 8)
+            {
+                int stickerUpgradeSlotCount = reader.ReadInt32();
+                for (int i = 0; i < stickerUpgradeSlotCount; i++)
+                {
+                    stickerUpgradeSlots.Add(reader.ReadBoolean());
                 }
             }
             // seperate the verification from the actual reading part so we dont partially load mod stuff.

@@ -44,10 +44,12 @@ namespace MTM101BaldAPI.Registers
         /// This item is unobtainable and should not be given to the player (or have its .item instantiated) in any circumstance.
         /// </summary>
         Unobtainable = 64,
+        // unimplemented
+        /*
         /// <summary>
         /// This item is a runtime item, generated during the middle of a run.
         /// </summary>
-        RuntimeItem = 128
+        RuntimeItem = 128*/
     }
 
     public class ItemMetaData : IMetadata<ItemObject>
@@ -66,8 +68,8 @@ namespace MTM101BaldAPI.Registers
         public ItemFlags flags;
         public Items id => value.itemType;
 
-        public List<string> tags => _tags;
-        List<string> _tags = new List<string>();
+        public HashSet<string> tags => _tags;
+        HashSet<string> _tags = new HashSet<string>();
 
         public ItemMetaData(PluginInfo info, ItemObject itmObj)
         {
