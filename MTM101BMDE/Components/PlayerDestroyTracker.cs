@@ -7,7 +7,7 @@ namespace MTM101BaldAPI.Components
         public ItemManager itm;
         private void OnDestroy()
         {
-            if (StickerManager.Instance != null)
+            if (StickerManager.Instance)
                 StickerManager.Instance.OnStickerApplied -= itm.UpdateTargetInventorySize;
         }
     }
