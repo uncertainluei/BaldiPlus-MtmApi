@@ -54,7 +54,6 @@ namespace MTM101BaldAPI
     }
 
     [BepInPlugin(ModGUID, "Baldi's Basics Plus Dev API", VersionNumber)]
-    [BepInDependency("pixelguy.pixelmodding.unity.bridgemanager")]
     public class MTM101BaldiDevAPI : BaseUnityPlugin
     {
         internal static ManualLogSource Log = new ManualLogSource("Baldi's Basics Plus Dev API Pre Initialization");
