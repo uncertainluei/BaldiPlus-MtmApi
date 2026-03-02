@@ -84,6 +84,7 @@ namespace MTM101BaldAPI
         public static RandomEventMetaStorage randomEventStorage = new RandomEventMetaStorage();
         public static SceneObjectMetaStorage sceneMeta = new SceneObjectMetaStorage();
         public static StickerMetaStorage stickerMeta = new StickerMetaStorage();
+        public static LevelTypeMetaStorage levelTypeMeta = new LevelTypeMetaStorage();
 
         internal static AssetManager AssetMan = new AssetManager();
 
@@ -101,7 +102,6 @@ namespace MTM101BaldAPI
 
         internal static IntrusiveAPIFeatures intrusiveFeatures = IntrusiveAPIFeatures.None;
         internal static bool tooLateForGeneratorBasedFeatures = false;
-        internal FakeGameInit fakeInit;
 
         public static IntrusiveAPIFeatures EnabledFeatures
         {
@@ -229,11 +229,6 @@ namespace MTM101BaldAPI
 
         internal void OnSceneUnload()
         {
-            // create the fake GameInitializer
-            GameObject fakeInitObject = new GameObject("FakeGameInitializer");
-            fakeInitObject.gameObject.SetActive(false);
-            DontDestroyOnLoad(fakeInitObject.gameObject);
-            fakeInit = fakeInitObject.AddComponent<FakeGameInit>();
             // load the resources we need and stop the transition
             AssetMan.Add<CursorController>("cursorController", Resources.FindObjectsOfTypeAll<CursorController>().First(x => x.name == "CursorOrigin"));
             gameLoader = Resources.FindObjectsOfTypeAll<GameLoader>().First(x => x.GetInstanceID() >= 0);
@@ -519,6 +514,13 @@ namespace MTM101BaldAPI
                 }
             });
 
+            PosterObject[] posters = Resources.FindObjectsOfTypeAll<PosterObject>().Where(x => x.GetInstanceID() >= 0).ToArray();
+            // leveltype metadata
+            levelTypeMeta.AddMeta(Info, LevelType.Schoolhouse, posters.First(x => x.name == "Chk_Lvl_Schoolhouse"));
+            levelTypeMeta.AddMeta(Info, LevelType.Factory, posters.First(x => x.name == "Chk_Lvl_Factory"));
+            levelTypeMeta.AddMeta(Info, LevelType.Laboratory, posters.First(x => x.name == "Chk_Lvl_Laboratory"));
+            levelTypeMeta.AddMeta(Info, LevelType.Maintenance, posters.First(x => x.name == "Chk_Lvl_Maintenance"));
+
             // sticker metadata
             StickerManager stickerMan = Resources.FindObjectsOfTypeAll<StickerManager>().First(x => x.GetInstanceID() >= 0);
             StickerData[] stickerData = (StickerData[])stickerMan.ReflectionGetVariable("stickerData");
@@ -660,10 +662,17 @@ namespace MTM101BaldAPI
             AssetMan.Add("ErrorTemplate", Resources.FindObjectsOfTypeAll<Canvas>().Where(x => x.name == "EndingError").First());
             AssetMan.Add("WindowTemplate", Resources.FindObjectsOfTypeAll<WindowObject>().Where(x => x.name == "GreenWindow").First());
             AssetMan.Add("DoorTemplate", Resources.FindObjectsOfTypeAll<StandardDoorMats>().Where(x => x.name == "ClassDoorSet").First());
-            PosterObject baldiposter = Resources.FindObjectsOfTypeAll<PosterObject>().Where(x => x.name == "BaldiPoster").First();
+            PosterObject[] posters = Resources.FindObjectsOfTypeAll<PosterObject>().Where(x => x.GetInstanceID() >= 0).ToArray();
+            PosterObject baldiposter = posters.Where(x => x.name == "BaldiPoster").First();
             PosterObject posterTemplate = ScriptableObject.Instantiate<PosterObject>(baldiposter);
             posterTemplate.name = "CharacterPosterTemplate";
             posterTemplate.baseTexture = null;
+
+            PosterObject levelTypeTemplate = ScriptableObject.Instantiate<PosterObject>(posters.First(x => x.name == "Chk_Lvl_Schoolhouse"));
+            levelTypeTemplate.name = "LevelTypePosterTemplate";
+            AssetMan.Add<PosterObject>("LevelTypePosterTemplate", levelTypeTemplate);
+
+
             AssetMan.Add<PosterObject>("CharacterPosterTemplate", posterTemplate);
             // TODO: create TemplateNPC from scratch and stop duplicating beans
             Beans beansToCopy = Resources.FindObjectsOfTypeAll<Beans>().First();
