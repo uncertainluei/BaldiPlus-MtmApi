@@ -45,13 +45,15 @@ namespace MTM101BaldAPI.PlusExtensions
             if (id == "baldi") return BaldiSpeaksWrapper(tv);
             // create image
             // todo: i should probably just create this instead of copying BaldiTV
-            Image clonedImage = GameObject.Instantiate<Image>((Image)_baldiImage.GetValue(tv), tv.transform);
-            clonedImage.name = id + "_Image";
+            Image baldiImage = (Image)_baldiImage.GetValue(tv);
+            Image clonedImage = GameObject.Instantiate(baldiImage, MTM101BaldiDevAPI.prefabTransform, true); // Fix from AlexBW145: this method is a hack but apparently because I made it a prefab before sending it into the real game.
             clonedImage.gameObject.SetActive(true);
-            GameObject.Destroy(clonedImage.GetComponent<VolumeAnimator>());
-            GameObject.Destroy(clonedImage.GetComponent<Animator>());
-            GameObject.Destroy(clonedImage.GetComponent<AudioSource>());
-            GameObject.Destroy(clonedImage.GetComponent<AudioManager>());
+            GameObject.DestroyImmediate(clonedImage.GetComponent<VolumeAnimator>());
+            GameObject.DestroyImmediate(clonedImage.GetComponent<Animator>());
+            GameObject.DestroyImmediate(clonedImage.GetComponent<AudioSource>());
+            GameObject.DestroyImmediate(clonedImage.GetComponent<AudioManager>());
+            clonedImage.rectTransform.SetParent(baldiImage.transform.parent, true);
+            baldiImage.enabled = false;
             clonedImage.transform.SetAsFirstSibling();
             // get a raw enumerator and pass that into the container ienumerator, and return that ienumerator
             return CharacterEnumeratorContainer(tv, clonedImage, GetRawCharacterEnumerator(id, tv, clonedImage, sound));
@@ -168,7 +170,7 @@ namespace MTM101BaldAPI.PlusExtensions
             }
             anim.image = image;
             volAnim.animator = anim;
-            volAnim.audioSource = audMan.audioDevice;
+            volAnim.audioSource = audMan.audioSourceManager.GetAudioSource(sound.soundType);
             volAnim.sensitivity = sensitivity;
             volAnim.volumeMultipler = volumeMultiplier;
             audMan.QueueAudio(sound);
