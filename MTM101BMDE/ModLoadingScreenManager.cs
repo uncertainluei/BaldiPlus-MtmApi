@@ -119,8 +119,10 @@ namespace MTM101BaldAPI
 
             if (!MoveNextButCrashWhenExcepted(info, numerator))
                 MTM101BaldiDevAPI.CauseCrash(info, new Exception("IEnumerator provided to loading ended before expected time!"));
-            if (numerator.Current.GetType() == typeof(string))
+            if (numerator.Current != null && numerator.Current.GetType() == typeof(string))
                 textToChange.text = (string)numerator.Current;
+            else
+                textToChange.text = "Loading...";
 
             int totalSteps = 0;
             SetBarValue(barToAdjust, 0f);

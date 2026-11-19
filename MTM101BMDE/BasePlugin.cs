@@ -708,7 +708,7 @@ namespace MTM101BaldAPI
             AssetMan.AddFromResources<TMPro.TMP_FontAsset>();
             AssetMan.AddFromResources<Material>();
             AssetMan.Add<SoundObject>("Silence", allSoundObjects.First(x => x.name == "Silence"));
-            AssetMan.Add<AudioClip>("ErrorSound", Resources.FindObjectsOfTypeAll<AudioClip>().First(x => x.name == "Activity_Incorrect"));
+            AssetMan.Add<AudioClip>("ErrorSound", Resources.FindObjectsOfTypeAll<AudioClip>().First(x => x.name == "ErrorMaybe"));
 
             // nab and modify the TextTextureGenerator prefab
             TextTextureGenerator foundGen = Resources.FindObjectsOfTypeAll<TextTextureGenerator>().First(x => x.IsPrefab());
